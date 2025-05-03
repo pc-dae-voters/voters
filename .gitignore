@@ -1,0 +1,23 @@
+# Terraform
+
+# Ignore state files
+*.tfstate
+*.tfstate.*
+
+# Ignore .terraform directory (working directory)
+.terraform
+
+# Ignore crash reports
+crash.log
+
+# Ignore sensitive files, like the tfplan or other plan files
+*.tfplan
+
+# Ignore modules downloaded by Terraform (optional, you can uncomment this if you want to manage modules via Git)
+#.terraform.lock.hcl
+
+# Ignore Terraform binaries (if you use tfenv or other version managers)
+#terraform*
+
+# Ignore automatically generated tfvars files (if you use them)
+#*.auto.tfvars
