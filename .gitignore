@@ -17,3 +17,4 @@ crash.log
 .terraform.lock.hcl
 **/*.csv
 
+voters/target
