@@ -1,0 +1,7 @@
+---
+description: 
+globs: *.java
+alwaysApply: false
+---
+Generating java files, please use lombok annotations to generate getters and setters
+

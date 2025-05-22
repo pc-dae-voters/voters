@@ -1,5 +1,5 @@
 # Terraform
-
+.DS_Store
 # Ignore state files
 *.tfstate
 *.tfstate.*
@@ -14,10 +14,6 @@ crash.log
 *.tfplan
 
 # Ignore modules downloaded by Terraform (optional, you can uncomment this if you want to manage modules via Git)
-#.terraform.lock.hcl
+.terraform.lock.hcl
+**/*.csv
 
-# Ignore Terraform binaries (if you use tfenv or other version managers)
-#terraform*
-
-# Ignore automatically generated tfvars files (if you use them)
-#*.auto.tfvars
