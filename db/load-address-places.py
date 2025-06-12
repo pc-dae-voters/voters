@@ -5,20 +5,23 @@ import sys
 import os
 import glob
 
-def get_db_connection(db_host, db_port, db_name, db_user, db_password):
-    """Establishes a connection to the PostgreSQL database."""
+def get_db_connection():
+    """Establishes a database connection using environment variables."""
     try:
         conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            dbname=db_name,
-            user=db_user,
-            password=db_password
+            host=os.environ['PGHOST'],
+            port=os.environ['PGPORT'],
+            dbname=os.environ['PGDATABASE'],
+            user=os.environ['PGUSER'],
+            password=os.environ['PGPASSWORD']
         )
         return conn
-    except psycopg2.Error as e:
-        print(f"Error connecting to PostgreSQL database: {e}", file=sys.stderr)
-        sys.exit(1)
+    except KeyError as e:
+        print(f"Error: Environment variable {e} not set.")
+        raise
+    except psycopg2.OperationalError as e:
+        print(f"Error: Database connection failed: {e}")
+        raise
 
 def get_uk_country_id(conn):
     """Fetches the ID for 'United Kingdom' from the countries table."""
@@ -144,12 +147,8 @@ def load_not_specified_places(conn, places_table_name, all_countries, cursor):
     return inserted_ns, skipped_ns, errors_ns
 
 def main():
+    # DB connection details are now sourced from environment variables.
     parser = argparse.ArgumentParser(description="Extract UK place names from address CSVs and add 'not specified' place entries for all countries into PostgreSQL.")
-    parser.add_argument("--pghost", required=True, help="PostgreSQL host")
-    parser.add_argument("--pgport", required=True, help="PostgreSQL port")
-    parser.add_argument("--pgdatabase", required=True, help="PostgreSQL database name")
-    parser.add_argument("--pguser", required=True, help="PostgreSQL user")
-    parser.add_argument("--pgpassword", required=True, help="PostgreSQL password")
     parser.add_argument("--input-folder", required=True, help="Folder containing address CSV files (e.g., addresses-AL.csv)")
     parser.add_argument("--address-column", default="Address", help="Name of the column containing the full address string (default: Address)")
     parser.add_argument("--places-table", default="places", help="Name of the target places table (default: places)")
@@ -169,7 +168,7 @@ def main():
     total_errors_ns = 0
 
     try:
-        conn = get_db_connection(args.pghost, args.pgport, args.pgdatabase, args.pguser, args.pgpassword)
+        conn = get_db_connection()
         uk_country_id = get_uk_country_id(conn) # Needed for UK places
         
         # --- Part 1: Process Address CSVs for UK Places ---

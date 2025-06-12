@@ -1,64 +1,74 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Script to load place names from address CSVs into the places table
+# Wrapper script to run the load-address-places.py Python script.
+# Version: 1.1
+# Author: Gemini (Daemon Consulting Software Engineer)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -euo pipefail
 
-# --- Database Connection Parameters (from environment or command line) ---
-DB_HOST=${PGHOST}
-DB_PORT=${PGPORT}
-DB_NAME=${PGDATABASE}
-DB_USER=${PGUSER}
-DB_PASSWORD=${PGPASSWORD}
+# --- Default Configuration ---
+DEFAULT_INPUT_FOLDER="data/addresses"
+INPUT_FOLDER=""
 
-# --- Script Specific Parameters ---
-INPUT_FOLDER_ARG=""
-ADDRESS_COLUMN_ARG="ADDRESS" # Default value in Python script
-PLACES_TABLE_ARG="places"   # Default value in Python script
-FILE_PATTERN_ARG="addresses*.csv" # Default value in Python script
+function usage() {
+    echo "usage: ${0} [--input-folder <path>] [--help] [--debug]" >&2
+    echo "This script runs the Python script to load address places from a folder of CSVs." >&2
+    echo "  --input-folder <path>  Path to the folder of address CSVs (default: project_root/${DEFAULT_INPUT_FOLDER})." >&2
+    echo "  --help                 Display this help message." >&2
+    echo "  --debug                Enable debug mode (set -x)." >&2
+    exit 1
+}
 
-# Parse command-line arguments
+# --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
-    key="$1"
-    case $key in
-        --pghost) DB_HOST="$2"; shift; shift; ;;
-        --pgport) DB_PORT="$2"; shift; shift; ;;
-        --pgdatabase) DB_NAME="$2"; shift; shift; ;;
-        --pguser) DB_USER="$2"; shift; shift; ;;
-        --pgpassword) DB_PASSWORD="$2"; shift; shift; ;;
-        --input-folder) INPUT_FOLDER_ARG="$2"; shift; shift; ;;
-        --address-column) ADDRESS_COLUMN_ARG="$2"; shift; shift; ;;
-        --places-table) PLACES_TABLE_ARG="$2"; shift; shift; ;;
-        --file-pattern) FILE_PATTERN_ARG="$2"; shift; shift; ;;
-        *) echo "Unknown option: $1"; exit 1; ;;
+    case "$1" in
+        --input-folder)
+            INPUT_FOLDER="$2"
+            shift 2
+            ;;
+        --debug)
+            set -x
+            shift
+            ;;
+        --help)
+            usage
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            usage
+            ;;
     esac
 done
 
-# Check for required DB connection parameters
-if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ]; then
-    echo "Error: Missing PostgreSQL connection parameters. Set PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD or use command-line options."
-    exit 1
-fi
-
-# Check for required input folder
-if [ -z "$INPUT_FOLDER_ARG" ]; then
-    echo "Error: --input-folder is a required argument."
-    exit 1
-fi
-if [ ! -d "$INPUT_FOLDER_ARG" ]; then
-    echo "Error: Input folder '$INPUT_FOLDER_ARG' not found or is not a directory."
-    exit 1
-fi
-
-# Determine the project root using git
+# --- Main Logic ---
+# Determine the project root using git and source the DB environment
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
+ENV_FILE="${PROJECT_ROOT}/infra/db/db-env.sh"
+
+if [[ ! -f "${ENV_FILE}" ]]; then
+    echo "Error: Database environment file not found at ${ENV_FILE}" >&2
+    echo "Please run 'do-terraform.sh db apply' to generate it." >&2
+    exit 1
+fi
+source "${ENV_FILE}"
+
+# Use default folder if one is not provided
+if [[ -z "$INPUT_FOLDER" ]]; then
+    INPUT_FOLDER="${PROJECT_ROOT}/${DEFAULT_INPUT_FOLDER}"
+fi
+
+# Check if folder exists
+if [[ ! -d "$INPUT_FOLDER" ]]; then
+    echo "Error: Input folder not found at ${INPUT_FOLDER}" >&2
+    exit 1
+fi
 
 # Set the PYTHONPATH to include the project's root directory
 export PYTHONPATH="${PROJECT_ROOT}"
 
-# Run the Python script
+# Run the Python script, passing the input-folder argument
 echo "Running load-address-places.py..."
-python3 "${PROJECT_ROOT}/db/load-address-places.py"
+python3 "${PROJECT_ROOT}/db/load-address-places.py" --input-folder "$INPUT_FOLDER"
 
 SCRIPT_EXIT_CODE=$?
 
