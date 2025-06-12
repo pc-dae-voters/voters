@@ -18,3 +18,9 @@ crash.log
 **/*.csv
 
 voters/target
+
+# IntelliJ
+.idea/
+
+# Custom Environment
+/infra/db/db-env.sh

@@ -1,69 +1,72 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Script to run the load-synthetic-people.py Python script.
+# Wrapper script to run the load-synthetic-people.py Python script.
+# Version: 1.3
+# Author: Gemini (Daemon Consulting Software Engineer)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR/../.."
-VENV_PATH="$PROJECT_ROOT/.venv"
-PYTHON_SCRIPT_PATH="$PROJECT_ROOT/voters/db/load-synthetic-people.py"
+set -euo pipefail
 
-# --- Database Connection Parameters (from environment or command line) ---
-DB_HOST=${PGHOST}
-DB_PORT=${PGPORT:-5432}
-DB_NAME=${PGDATABASE}
-DB_USER=${PGUSER}
-DB_PASSWORD=${PGPASSWORD}
+# --- Default Configuration ---
+NUM_PEOPLE=1000
+RANDOM_SEED=""
+PASS_THRU_ARGS=""
 
-# --- Script Specific Parameters ---
-NUM_PEOPLE_ARG="1000" # Default number of people to generate
-RANDOM_SEED_ARG=""
+function usage() {
+    echo "usage: ${0} [--num-people <n>] [--random-seed <n>] [--help] [--debug]" >&2
+    echo "This script runs the Python script to generate synthetic people." >&2
+    echo "  --num-people <n>   Number of people to generate (default: ${NUM_PEOPLE})." >&2
+    echo "  --random-seed <n>  Optional random seed for reproducibility." >&2
+    echo "  --help             Display this help message." >&2
+    echo "  --debug            Enable debug mode (set -x)." >&2
+    exit 1
+}
 
-# Parse command-line arguments
+# --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
-    key="$1"
-    case $key in
-        --pghost) DB_HOST="$2"; shift; shift; ;;
-        --pgport) DB_PORT="$2"; shift; shift; ;;
-        --pgdatabase) DB_NAME="$2"; shift; shift; ;;
-        --pguser) DB_USER="$2"; shift; shift; ;;
-        --pgpassword) DB_PASSWORD="$2"; shift; shift; ;;
-        --num-people) NUM_PEOPLE_ARG="$2"; shift; shift; ;;
-        --random-seed) RANDOM_SEED_ARG="$2"; shift; shift; ;;
-        *) echo "Unknown option: $1"; exit 1; ;;
+    case "$1" in
+        --num-people)
+            NUM_PEOPLE="$2"
+            shift 2
+            ;;
+        --random-seed)
+            RANDOM_SEED="$2"
+            shift 2
+            ;;
+        --debug)
+            set -x
+            shift
+            ;;
+        --help)
+            usage
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            usage
+            ;;
     esac
 done
 
-# Check for required DB connection parameters
-if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ]; then
-    echo "Error: Missing PostgreSQL connection parameters. Set PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD or use command-line options."
+# --- Main Logic ---
+# Determine the project root using git and source the DB environment
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+ENV_FILE="${PROJECT_ROOT}/infra/db/db-env.sh"
+
+if [[ ! -f "${ENV_FILE}" ]]; then
+    echo "Error: Database environment file not found at ${ENV_FILE}" >&2
+    echo "Please run 'do-terraform.sh db apply' to generate it." >&2
     exit 1
 fi
+source "${ENV_FILE}"
 
-# Check if venv and Python script exist
-if [ ! -d "$VENV_PATH/bin" ]; then echo "Error: Virtual environment not found at $VENV_PATH. Run setup-venv.sh from project root."; exit 1; fi
-if [ ! -f "$PYTHON_SCRIPT_PATH" ]; then echo "Error: Python script not found at $PYTHON_SCRIPT_PATH"; exit 1; fi
-
-echo "Activating virtual environment..."
-source "$VENV_PATH/bin/activate"
-
-echo "Running Python script to load synthetic people data using names from DB tables..."
-CMD_ARGS=(
-    "$PYTHON_SCRIPT_PATH" \
-    --pghost "$DB_HOST" \
-    --pgport "$DB_PORT" \
-    --pgdatabase "$DB_NAME" \
-    --pguser "$DB_USER" \
-    --pgpassword "$DB_PASSWORD" \
-    --num-people "$NUM_PEOPLE_ARG"
-)
-
-if [ -n "$RANDOM_SEED_ARG" ]; then
-    CMD_ARGS+=(--random-seed "$RANDOM_SEED_ARG")
+# Construct arguments to pass to python script
+PASS_THRU_ARGS="--num-people ${NUM_PEOPLE}"
+if [[ -n "$RANDOM_SEED" ]]; then
+    PASS_THRU_ARGS="${PASS_THRU_ARGS} --random-seed ${RANDOM_SEED}"
 fi
 
-python3 "${CMD_ARGS[@]}"
+# Set the PYTHONPATH to include the project's root directory
+export PYTHONPATH="${PROJECT_ROOT}"
 
-SCRIPT_EXIT_CODE=$?
-
-echo "Script finished with exit code $SCRIPT_EXIT_CODE."
-exit $SCRIPT_EXIT_CODE 
+# Run the Python script, passing the constructed arguments
+echo "Running load-synthetic-people.py..."
+python3 "${PROJECT_ROOT}/db/load-synthetic-people.py" ${PASS_THRU_ARGS} 

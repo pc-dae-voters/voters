@@ -7,15 +7,23 @@ from datetime import datetime, timedelta
 
 # --- Database and Setup Functions ---
 
-def get_db_connection(db_host, db_port, db_name, db_user, db_password):
+def get_db_connection():
+    """Establishes a database connection using environment variables."""
     try:
         conn = psycopg2.connect(
-            host=db_host, port=db_port, dbname=db_name, user=db_user, password=db_password
+            host=os.environ['PGHOST'],
+            port=os.environ['PGPORT'],
+            dbname=os.environ['PGDATABASE'],
+            user=os.environ['PGUSER'],
+            password=os.environ['PGPASSWORD']
         )
         return conn
-    except psycopg2.Error as e:
-        print(f"Error connecting to PostgreSQL database: {e}", file=sys.stderr)
-        sys.exit(1)
+    except KeyError as e:
+        print(f"Error: Environment variable {e} not set.")
+        raise
+    except psycopg2.OperationalError as e:
+        print(f"Error: Database connection failed: {e}")
+        raise
 
 def get_ids_from_table(conn, table_name, column_name="id"):
     ids = []
@@ -100,12 +108,9 @@ def calculate_age(birth_date, today):
 # --- Main Generation Logic ---
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate synthetic citizen and birth data using names from DB tables.")
-    parser.add_argument("--pghost", required=True, help="PostgreSQL host")
-    parser.add_argument("--pgport", default="5432", help="PostgreSQL port")
-    parser.add_argument("--pgdatabase", required=True, help="PostgreSQL database name")
-    parser.add_argument("--pguser", required=True, help="PostgreSQL user")
-    parser.add_argument("--pgpassword", required=True, help="PostgreSQL password")
+    """Main function to load synthetic people."""
+    # DB connection details are now sourced from environment variables.
+    parser = argparse.ArgumentParser(description="Generate and insert synthetic people data into a PostgreSQL database.")
     parser.add_argument("--num-people", type=int, default=1000, help="Number of people to generate")
     parser.add_argument("--random-seed", type=int, help="Optional random seed for reproducibility")
 
@@ -114,12 +119,10 @@ def main():
     if args.random_seed is not None:
         random.seed(args.random_seed)
 
-    conn = None
+    conn = get_db_connection()
     today = datetime.now().date()
 
     try:
-        conn = get_db_connection(args.pghost, args.pgport, args.pgdatabase, args.pguser, args.pgpassword)
-        
         # Load name IDs from database tables
         male_first_name_ids, female_first_name_ids, neutral_first_name_ids = get_first_name_ids_by_gender(conn)
         all_surname_ids = get_ids_from_table(conn, "surnames")

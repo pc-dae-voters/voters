@@ -3,9 +3,6 @@
 # Script to load place names from address CSVs into the places table
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR/../.."
-VENV_PATH="$PROJECT_ROOT/.venv"
-PYTHON_SCRIPT_PATH="$PROJECT_ROOT/voters/db/load-address-places.py"
 
 # --- Database Connection Parameters (from environment or command line) ---
 DB_HOST=${PGHOST}
@@ -53,24 +50,15 @@ if [ ! -d "$INPUT_FOLDER_ARG" ]; then
     exit 1
 fi
 
-# Check if venv and Python script exist
-if [ ! -d "$VENV_PATH/bin" ]; then echo "Virtual environment not found at $VENV_PATH. Run setup-venv.sh from project root."; exit 1; fi
-if [ ! -f "$PYTHON_SCRIPT_PATH" ]; then echo "Python script not found at $PYTHON_SCRIPT_PATH"; exit 1; fi
+# Determine the project root using git
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
-echo "Activating virtual environment..."
-source "$VENV_PATH/bin/activate"
+# Set the PYTHONPATH to include the project's root directory
+export PYTHONPATH="${PROJECT_ROOT}"
 
-echo "Running Python script to load places from address CSVs..."
-python3 "$PYTHON_SCRIPT_PATH" \
-    --pghost "$DB_HOST" \
-    --pgport "$DB_PORT" \
-    --pgdatabase "$DB_NAME" \
-    --pguser "$DB_USER" \
-    --pgpassword "$DB_PASSWORD" \
-    --input-folder "$INPUT_FOLDER_ARG" \
-    --address-column "$ADDRESS_COLUMN_ARG" \
-    --places-table "$PLACES_TABLE_ARG" \
-    --file-pattern "$FILE_PATTERN_ARG"
+# Run the Python script
+echo "Running load-address-places.py..."
+python3 "${PROJECT_ROOT}/db/load-address-places.py"
 
 SCRIPT_EXIT_CODE=$?
 

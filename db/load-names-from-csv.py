@@ -6,15 +6,23 @@ import os
 import glob
 import random
 
-def get_db_connection(db_host, db_port, db_name, db_user, db_password):
+def get_db_connection():
+    """Establishes a database connection using environment variables."""
     try:
         conn = psycopg2.connect(
-            host=db_host, port=db_port, dbname=db_name, user=db_user, password=db_password
+            host=os.environ['PGHOST'],
+            port=os.environ['PGPORT'],
+            dbname=os.environ['PGDATABASE'],
+            user=os.environ['PGUSER'],
+            password=os.environ['PGPASSWORD']
         )
         return conn
-    except psycopg2.Error as e:
-        print(f"Error connecting to PostgreSQL database: {e}", file=sys.stderr)
-        sys.exit(1)
+    except KeyError as e:
+        print(f"Error: Environment variable {e} not set.")
+        raise
+    except psycopg2.OperationalError as e:
+        print(f"Error: Database connection failed: {e}")
+        raise
 
 def load_names_to_table(conn, table_name, names_to_load, cursor):
     inserted_count = 0
@@ -63,12 +71,9 @@ def load_first_names_with_gender_to_table(conn, first_names_data, cursor):
     return inserted_count, skipped_count, error_count
 
 def main():
-    parser = argparse.ArgumentParser(description="Load first names and surnames from CSV files into database tables.")
-    parser.add_argument("--pghost", required=True, help="PostgreSQL host")
-    parser.add_argument("--pgport", default="5432", help="PostgreSQL port (default: 5432)")
-    parser.add_argument("--pgdatabase", required=True, help="PostgreSQL database name")
-    parser.add_argument("--pguser", required=True, help="PostgreSQL user")
-    parser.add_argument("--pgpassword", required=True, help="PostgreSQL password")
+    """Main function to load names."""
+    # DB connection details are now sourced from environment variables.
+    parser = argparse.ArgumentParser(description="Load first and last names from CSV files, with sampling for non-GB files.")
     parser.add_argument("--names-data-folder", default="pc-dae-voters/data/names/data", help="Folder containing country-specific name CSV files.")
     parser.add_argument("--file-pattern", default="*.csv", help="Pattern for name CSV files (default: *.csv)")
     parser.add_argument("--gb-file", default="GB.csv", help="Name of the Great Britain CSV file (process 100% of this). Case-sensitive.")
@@ -80,15 +85,13 @@ def main():
     if args.random_seed is not None:
         random.seed(args.random_seed)
 
-    conn = None
+    conn = get_db_connection()
     unique_first_names_data = {} # Changed from set to dict
     unique_surnames = set()
     files_processed_count = 0
     rows_processed_count = 0
 
     try:
-        conn = get_db_connection(args.pghost, args.pgport, args.pgdatabase, args.pguser, args.pgpassword)
-
         name_csv_files_path = os.path.join(args.names_data_folder, args.file_pattern)
         csv_files = glob.glob(name_csv_files_path)
 

@@ -1,22 +1,26 @@
+import os
 import csv
 import psycopg2
 import argparse
 import sys
 
-def get_db_connection(db_host, db_port, db_name, db_user, db_password):
-    """Establishes a connection to the PostgreSQL database."""
+def get_db_connection():
+    """Establishes a database connection using environment variables."""
     try:
         conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            dbname=db_name,
-            user=db_user,
-            password=db_password
+            host=os.environ['PGHOST'],
+            port=os.environ['PGPORT'],
+            dbname=os.environ['PGDATABASE'],
+            user=os.environ['PGUSER'],
+            password=os.environ['PGPASSWORD']
         )
         return conn
-    except psycopg2.Error as e:
-        print(f"Error connecting to PostgreSQL database: {e}", file=sys.stderr)
-        sys.exit(1)
+    except KeyError as e:
+        print(f"Error: Environment variable {e} not set.")
+        raise
+    except psycopg2.OperationalError as e:
+        print(f"Error: Database connection failed: {e}")
+        raise
 
 def get_country_id(conn, country_name):
     """Fetches the ID of a given country from the countries table."""
@@ -88,19 +92,15 @@ def insert_places_from_csv(conn, table_name, csv_file_path):
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description="Load places from CSV to PostgreSQL.")
-    parser.add_argument("--pghost", required=True)
-    parser.add_argument("--pgport", required=True)
-    parser.add_argument("--pgdatabase", required=True)
-    parser.add_argument("--pguser", required=True)
-    parser.add_argument("--pgpassword", required=True)
-    parser.add_argument("--table", default="places")
-    parser.add_argument("--csv-file", required=True)
+    """Main function to load places data."""
+    # DB connection details are now sourced from environment variables.
+    parser = argparse.ArgumentParser(description="Load UK places data from a CSV file into the database.")
+    parser.add_argument('--csv-file', required=True, help='Path to the CSV file containing place names.')
+    parser.add_argument('--table', default='places', help='The name of the database table to load data into.')
     args = parser.parse_args()
 
-    conn = None
+    conn = get_db_connection()
     try:
-        conn = get_db_connection(args.pghost, args.pgport, args.pgdatabase, args.pguser, args.pgpassword)
         if conn:
             # Removed call to ensure table exists
             insert_places_from_csv(conn, args.table, args.csv_file)

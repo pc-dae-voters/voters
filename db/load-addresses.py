@@ -5,15 +5,23 @@ import sys
 import os
 import glob
 
-def get_db_connection(db_host, db_port, db_name, db_user, db_password):
+def get_db_connection():
+    """Establishes a database connection using environment variables."""
     try:
         conn = psycopg2.connect(
-            host=db_host, port=db_port, dbname=db_name, user=db_user, password=db_password
+            host=os.environ['PGHOST'],
+            port=os.environ['PGPORT'],
+            dbname=os.environ['PGDATABASE'],
+            user=os.environ['PGUSER'],
+            password=os.environ['PGPASSWORD']
         )
         return conn
-    except psycopg2.Error as e:
-        print(f"Error connecting to PostgreSQL database: {e}", file=sys.stderr)
-        sys.exit(1)
+    except KeyError as e:
+        print(f"Error: Environment variable {e} not set.")
+        raise
+    except psycopg2.OperationalError as e:
+        print(f"Error: Database connection failed: {e}")
+        raise
 
 def get_country_id(conn, country_name="United Kingdom"):
     try:
@@ -59,12 +67,9 @@ def normalize_postcode(postcode):
     return postcode.upper().replace(" ", "")
 
 def main():
-    parser = argparse.ArgumentParser(description="Load addresses from CSV files into PostgreSQL.")
-    parser.add_argument("--pghost", required=True, help="PostgreSQL host")
-    parser.add_argument("--pgport", default="5432", help="PostgreSQL port (default: 5432)")
-    parser.add_argument("--pgdatabase", required=True, help="PostgreSQL database name")
-    parser.add_argument("--pguser", required=True, help="PostgreSQL user")
-    parser.add_argument("--pgpassword", required=True, help="PostgreSQL password")
+    """Main function to load addresses."""
+    # DB connection details are now sourced from environment variables.
+    parser = argparse.ArgumentParser(description="Load address data from multiple CSV files into the database.")
     parser.add_argument("--input-folder", required=True, help="Folder containing address CSV files.")
     parser.add_argument("--address-column", default="Address", help="Name of the column containing the full address string (default: Address)")
     parser.add_argument("--postcode-column", default="Postcode", help="Name of the column containing the postcode (default: Postcode)")
@@ -73,7 +78,7 @@ def main():
 
     args = parser.parse_args()
 
-    conn = None
+    conn = get_db_connection()
     total_rows_processed = 0
     total_inserted = 0
     total_skipped_place_not_found = 0
@@ -82,7 +87,6 @@ def main():
     files_processed_count = 0
 
     try:
-        conn = get_db_connection(args.pghost, args.pgport, args.pgdatabase, args.pguser, args.pgpassword)
         target_country_id = get_country_id(conn, args.target_country)
 
         csv_files = glob.glob(os.path.join(args.input_folder, args.file_pattern))

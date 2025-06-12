@@ -11,4 +11,9 @@ output "private_subnet_ids" {
 output "public_subnet_ids" {
   description = "List of IDs of public subnets"
   value       = module.vpc.public_subnet_ids
+}
+
+output "default_security_group_id" {
+  description = "The ID of the default security group"
+  value       = module.vpc.default_security_group_id
 } 

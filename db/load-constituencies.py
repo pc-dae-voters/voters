@@ -1,22 +1,27 @@
-import csv
+import os
 import psycopg2
+from psycopg2 import sql
+import csv
 import argparse
 import sys
 
-def get_db_connection(db_host, db_port, db_name, db_user, db_password):
-    """Establishes a connection to the PostgreSQL database."""
+def get_db_connection():
+    """Establishes a database connection using environment variables."""
     try:
         conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            dbname=db_name,
-            user=db_user,
-            password=db_password
+            host=os.environ['PGHOST'],
+            port=os.environ['PGPORT'],
+            dbname=os.environ['PGDATABASE'],
+            user=os.environ['PGUSER'],
+            password=os.environ['PGPASSWORD']
         )
         return conn
-    except psycopg2.Error as e:
-        print(f"Error connecting to PostgreSQL database: {e}", file=sys.stderr)
-        sys.exit(1)
+    except KeyError as e:
+        print(f"Error: Environment variable {e} not set.")
+        raise
+    except psycopg2.OperationalError as e:
+        print(f"Error: Database connection failed: {e}")
+        raise
 
 def load_data_from_csv(conn, table_name, csv_file_path):
     """Loads data from a CSV file into the specified PostgreSQL table."""
@@ -94,21 +99,20 @@ def load_data_from_csv(conn, table_name, csv_file_path):
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description="Load UK constituency data from CSV to PostgreSQL.")
-    parser.add_argument("--pghost", required=True)
-    parser.add_argument("--pgport", required=True)
-    parser.add_argument("--pgdatabase", required=True)
-    parser.add_argument("--pguser", required=True)
-    parser.add_argument("--pgpassword", required=True)
-    parser.add_argument("--csv-file", required=True)
-    parser.add_argument("--table", default="constituencies")
+    """
+    Main function to parse arguments, connect to the database,
+    and load constituency data from a CSV file.
+    """
+    # Note: Argument parsing for DB connection details is removed.
+    # The script now relies on environment variables set by db-env.sh.
+    parser = argparse.ArgumentParser(description="Load constituency data from a CSV file.")
+    parser.add_argument("--csv-file", required=True, help="Path to the constituency data CSV file.")
     args = parser.parse_args()
-
-    conn = None
+    
+    conn = get_db_connection()
     try:
-        conn = get_db_connection(args.pghost, args.pgport, args.pgdatabase, args.pguser, args.pgpassword)
         if conn:
-            load_data_from_csv(conn, args.table, args.csv_file)
+            load_data_from_csv(conn, "constituencies", args.csv_file)
     except psycopg2.Error as e: # Catch potential connection errors or others not caught in load_data
         print(f"A PostgreSQL error occurred: {e}", file=sys.stderr)
         sys.exit(1)
