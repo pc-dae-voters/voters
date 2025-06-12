@@ -1,41 +1,32 @@
-resource "aws_db_subnet_group" "main" {
-  name       = "db-subnet-group"
-  subnet_ids = var.private_subnet_ids
-  tags = merge({
-    Name = "db-subnet-group"
-  }, var.tags)
+resource "aws_db_subnet_group" "default" {
+  name       = "${var.db_name}-db-subnet-group"
+  subnet_ids = var.subnet_ids
+
+  tags = merge(
+    {
+      Name = "${var.db_name} DB Subnet Group"
+    },
+    var.tags
+  )
 }
 
-resource "aws_security_group" "rds" {
-  name_prefix = "rds-sg-"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Be sure to restrict this in production!
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge({
-    Name = "rds-security-group"
-  }, var.tags)
-}
-
-resource "aws_db_instance" "main" {
-  identifier           = "voting-app-db"
-  allocated_storage    = var.db_allocated_storage
-  db_name              = var.db_name
+resource "aws_db_instance" "default" {
+  allocated_storage    = 20
+  storage_type         = "gp2"
   engine               = "postgres"
-  instance_class       = var.db_instance_class
+  engine_version       = var.engine_version
+  instance_class       = var.instance_class
+  db_name              = var.db_name
   username             = var.db_username
-  password             = var.db_password
-  parameter_group_name = "default.postgres15" # Or a more specific group
+  password             = random_password.password.result
+  parameter_group_name = "default.postgres15"
+  skip_final_snapshot  = true
+  db_subnet_group_name = aws_db_subnet_group.default.name
+  tags                 = var.tags
+}
+
+resource "random_password" "password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-="
 }
