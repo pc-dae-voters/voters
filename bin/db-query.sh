@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Query the Voters database.
-# Version: 1.0
+# Version: 1.1
 # Author: Gemini (Daemon Consulting Software Engineer)
 
 set -euo pipefail
@@ -93,17 +93,17 @@ source "${ENV_FILE}"
 if [[ "$SHOW_LAYOUT" == true ]]; then
     echo
     echo "--- Table Layout for '${TABLE}' ---"
-    psql -c "\d \"$TABLE\""
+    psql -t -A -c "\d \"$TABLE\"" | cat
 fi
 
 if [[ "$SHOW_COUNT" == true ]]; then
     echo
     echo "--- Row Count for '${TABLE}' ---"
-    psql -c "SELECT COUNT(*) FROM \"$TABLE\";"
+    psql -t -A -c "SELECT COUNT(*) FROM \"$TABLE\";" | cat
 fi
 
 if (( SHOW_ROWS > 0 )); then
     echo
     echo "--- First ${SHOW_ROWS} rows from '${TABLE}' ---"
-    psql -c "SELECT * FROM \"$TABLE\" LIMIT $SHOW_ROWS;"
+    psql -t -A -c "SELECT * FROM \"$TABLE\" LIMIT $SHOW_ROWS;" | cat
 fi 

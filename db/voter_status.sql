@@ -1,4 +1,4 @@
-CREATE TABLE voter_status (
-    code CHAR(1) PRIMARY KEY,
-    description VARCHAR(255) NOT NULL
+CREATE TABLE IF NOT EXISTS voter_status (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
 ); 

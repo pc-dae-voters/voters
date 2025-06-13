@@ -1,4 +1,4 @@
-CREATE TABLE first_names (
+CREATE TABLE IF NOT EXISTS first_names (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL,
     gender CHAR(1)

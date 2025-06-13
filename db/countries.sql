@@ -1,6 +1,6 @@
-CREATE TABLE countries (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL
+CREATE TABLE IF NOT EXISTS countries (
+    code CHAR(2) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
 );
 
 INSERT INTO countries (name) VALUES

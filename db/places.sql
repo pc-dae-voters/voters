@@ -1,7 +1,5 @@
-CREATE TABLE places (
+CREATE TABLE IF NOT EXISTS places (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    country_id INTEGER,
-    FOREIGN KEY (country_id) REFERENCES countries(id),
-    UNIQUE (name, country_id)
+    country_code CHAR(2) REFERENCES countries(code)
 ); 

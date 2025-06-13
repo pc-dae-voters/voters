@@ -1,6 +1,6 @@
-CREATE TABLE citizen_statuses (
-    status_code CHAR(1) PRIMARY KEY,
-    status_description VARCHAR(255) NOT NULL
+CREATE TABLE IF NOT EXISTS citizen_status (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
 );
 
 INSERT INTO citizen_statuses (status_code, status_description) VALUES
