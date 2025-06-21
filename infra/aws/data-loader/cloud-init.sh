@@ -6,6 +6,38 @@
 
 set -e
 
+# Mount and format EBS volume at /data if needed
+# Handle both xvdf and nvme device naming conventions
+if [ -b /dev/nvme1n1 ]; then
+  DEVICE="/dev/nvme1n1"
+elif [ -b /dev/xvdf ]; then
+  DEVICE="/dev/xvdf"
+else
+  echo "Error: No data volume found. Available block devices:"
+  lsblk
+  exit 1
+fi
+
+MOUNTPOINT="/data"
+
+echo "Using device: $DEVICE"
+
+if ! file -s $DEVICE | grep -q ext4; then
+  echo "Formatting $DEVICE as ext4..."
+  mkfs.ext4 $DEVICE
+fi
+
+mkdir -p $MOUNTPOINT
+if ! mount | grep -q "$MOUNTPOINT"; then
+  echo "Mounting $DEVICE at $MOUNTPOINT..."
+  mount $DEVICE $MOUNTPOINT
+fi
+
+# Ensure it is mounted on boot
+if ! grep -q "$DEVICE" /etc/fstab; then
+  echo "$DEVICE $MOUNTPOINT ext4 defaults,nofail 0 2" >> /etc/fstab
+fi
+
 # Update system
 echo "Updating system packages..."
 yum update -y

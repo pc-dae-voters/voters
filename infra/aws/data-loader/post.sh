@@ -1,4 +1,3 @@
-# Extract the private key for SSH access and set permissions
-echo "Extracting loader.key from Terraform output..."
-terraform output -raw private_key > ../../loader.key
-chmod 600 ../../loader.key 
+# Display SSH command for manual key pair
+echo "SSH command for manual key pair:"
+echo "ssh -i loader.key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$(terraform output -raw public_ip)" 

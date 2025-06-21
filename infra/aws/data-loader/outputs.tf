@@ -13,12 +13,6 @@ output "ssh_command" {
   value       = "ssh -i loader.key ec2-user@${aws_instance.data_loader.public_ip}"
 }
 
-output "private_key" {
-  description = "Private key for SSH access"
-  value       = tls_private_key.data_loader_key.private_key_pem
-  sensitive   = true
-}
-
 output "database_connection_info" {
   description = "Database connection information"
   value = {

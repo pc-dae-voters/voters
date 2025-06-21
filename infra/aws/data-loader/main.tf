@@ -38,18 +38,17 @@ data "terraform_remote_state" "db" {
   }
 }
 
+data "terraform_remote_state" "data_volume" {
+  backend = "s3"
+  config = {
+    bucket = "dae-voters-tfstate"
+    key    = "data-volume/terraform.tfstate"
+    region = var.region
+  }
+}
+
 # SSH key pair for the data loader instance
-resource "tls_private_key" "data_loader_key" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "data_loader_key_pair" {
-  key_name   = "voters-data-loader-key"
-  public_key = tls_private_key.data_loader_key.public_key_openssh
-}
-
-# Use the manually created key pair instead
+# Using the manually created key pair
 data "aws_key_pair" "data_loader_key_pair" {
   key_name = "voters-data-loader-key-manual"
 }
@@ -159,6 +158,20 @@ resource "aws_instance" "data_loader" {
   }
 
   tags = {
-    Name = "voters-data-loader"
+    Name = "voters-data-loader-${formatdate("YYYY-MM-DD-HH-MM", timestamp())}"
   }
+
+  lifecycle {
+    replace_triggered_by = [
+      data.cloudinit_config.data_loader
+    ]
+  }
+}
+
+# Attach the data volume to the instance
+resource "aws_volume_attachment" "data" {
+  device_name = "/dev/xvdf"
+  volume_id   = data.terraform_remote_state.data_volume.outputs.volume_id
+  instance_id = aws_instance.data_loader.id
+  force_detach = true
 } 
