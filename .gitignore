@@ -24,3 +24,5 @@ voters/target
 
 # Custom Environment
 /infra/db/db-env.sh
+
+.az-sp.sh
