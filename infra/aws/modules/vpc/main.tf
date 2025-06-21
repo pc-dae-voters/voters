@@ -56,7 +56,7 @@ resource "aws_route_table_association" "public" {
 
 resource "aws_eip" "nat_gateway" {
   count = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.public_subnet_cidrs)) : 0
-  vpc   = true
+  domain = "vpc"
   tags = merge({
     Name = "nat-gateway-eip-${count.index}"
   }, var.tags)

@@ -10,7 +10,7 @@ provider "aws" {
 data "terraform_remote_state" "vpc" {
   backend = "s3"
   config = {
-    bucket = "paulcarlton-voters-tfstate"
+    bucket = "dae-voters-tfstate"
     key    = "vpc/terraform.tfstate"
     region = "eu-west-1"
   }
@@ -19,10 +19,8 @@ data "terraform_remote_state" "vpc" {
 module "eks_cluster" {
   source = "../modules/eks"
 
-  cluster_name       = "voters-cluster"
-  vpc_id             = data.terraform_remote_state.vpc.outputs.vpc_id
-  public_subnet_ids  = data.terraform_remote_state.vpc.outputs.public_subnet_ids
-  private_subnet_ids = data.terraform_remote_state.vpc.outputs.private_subnet_ids
+  cluster_name = "voters-cluster"
+  subnet_ids   = data.terraform_remote_state.vpc.outputs.private_subnet_ids
   tags = {
     Project   = "Voters"
     ManagedBy = "Terraform"

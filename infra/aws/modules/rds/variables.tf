@@ -25,6 +25,18 @@ variable "db_username" {
   type        = string
 }
 
+variable "vpc_security_group_ids" {
+  description = "A list of VPC security group IDs to associate with the database"
+  type        = list(string)
+  default     = []
+}
+
+variable "publicly_accessible" {
+  description = "Whether the database should be publicly accessible"
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   description = "A map of tags to assign to the resources."
   type        = map(string)

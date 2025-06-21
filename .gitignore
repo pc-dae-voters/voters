@@ -23,6 +23,9 @@ voters/target
 .idea/
 
 # Custom Environment
-/infra/db/db-env.sh
+/infra/aws/db/db-env.sh
 
 .az-sp.sh
+
+# SSH Keys
+loader.key

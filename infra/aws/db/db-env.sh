@@ -2,10 +2,10 @@
 # It contains the connection details for the database.
 # Do not commit this file to version control.
 
-export PGHOST="terraform-20250612154245863900000001.c3xsdafekpkg.eu-west-1.rds.amazonaws.com"
+export PGHOST="terraform-20250621152248700600000002.c7waw6k0kw57.eu-west-1.rds.amazonaws.com"
 export PGPORT="5432"
 export PGDATABASE="voters"
 export PGUSER="voteradmin"
-export PGPASSWORD="PUXATr0whIuHfA#H"
+export PGPASSWORD="MUcNiPyn1$o47hbV"
 
 echo "Database environment variables set."
