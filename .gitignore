@@ -23,7 +23,7 @@ voters/target
 .idea/
 
 # Custom Environment
-/infra/aws/db/db-env.sh
+./infra/aws/db/db-env.sh
 
 .az-sp.sh
 
