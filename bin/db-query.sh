@@ -64,9 +64,9 @@ if [[ -z "$TABLE" ]]; then
     usage
 fi
 
+# Default to layout if no action is specified
 if [[ "$SHOW_LAYOUT" == false && "$SHOW_COUNT" == false && $SHOW_ROWS -eq 0 ]]; then
-    echo "Error: You must specify at least one action: --layout, --count, or --show-rows." >&2
-    usage
+    SHOW_LAYOUT=true
 fi
 
 # --- Main Logic ---

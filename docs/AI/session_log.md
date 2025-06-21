@@ -176,4 +176,131 @@ The issue was resolved by using a manually created key pair instead of the Terra
 
 **Assistant**: Confirmed successful SSH connection to the data-loader instance at 18.203.238.51. The key pair mismatch issue was resolved by using a manual key pair and updating the Terraform configuration accordingly.
 
-Provided the working SSH command with ignore options for host key verification. 
+Provided the working SSH command with ignore options for host key verification.
+
+## 2025-06-21 - Data Loader Cloud-init and EBS Volume Issues
+
+### User Request
+The user reported that after running the data-volume and data-loader Terraform modules, the cloud-init script didn't run properly and the EBS volume wasn't mounted.
+
+### Issues Identified
+1. **EBS Volume Mounting**: The cloud-init script was trying to mount `/dev/xvdf` but the actual device was `/dev/nvme1n1` due to AWS NVMe naming conventions
+2. **Timing Issue**: Cloud-init runs during instance boot, but EBS volume attachment happens after instance creation
+3. **Database Connection**: Environment file was created in wrong location (`infra/aws/db/` instead of `infra/db/`)
+4. **Port Configuration**: Database host included port in PGHOST variable, causing conflicts with PGPORT
+
+### Solutions Implemented
+1. **Updated cloud-init script** to handle both xvdf and nvme device naming conventions
+2. **Added systemd service** (`voters-setup.service`) that runs after cloud-init to handle delayed EBS volume attachment
+3. **Fixed database environment file path** to match what the create-tables.sh script expects
+4. **Fixed database connection configuration** by removing PGPORT when PGHOST already includes port
+
+### Key Changes Made
+- Modified `cloud-init.sh` to not fail if EBS volume isn't available during boot
+- Created systemd service that waits up to 5 minutes for EBS volume and then mounts it
+- Fixed database environment file location from `infra/aws/db/db-env.sh` to `infra/db/db-env.sh`
+- Fixed PGPORT configuration to avoid conflicts with port in PGHOST
+
+### Result
+The data loader instance now:
+- ✅ Automatically mounts the EBS volume at `/data` when it becomes available
+- ✅ Installs all required software packages
+- ✅ Clones the repository and sets up Python environment
+- ✅ Creates database environment file in correct location
+- ✅ Successfully connects to the database and creates tables
+- ✅ Provides scripts for data loading (`/home/ec2-user/load-data.sh`)
+
+### Commands Used
+```bash
+# Recreated instance with fixed cloud-init script
+terraform destroy -auto-approve && terraform apply -auto-approve
+
+# Verified EBS volume mounting
+ssh -i loader.key ec2-user@<instance-ip> "lsblk && df -h"
+
+# Tested database connection
+ssh -i loader.key ec2-user@<instance-ip> "cd /home/ec2-user/pc-dae-voters && source infra/db/db-env.sh && psql -c '\dt'"
+```
+
+### Current Status
+The data loader instance is fully functional and ready for data loading operations. The cloud-init script now properly handles the timing issues with EBS volume attachment and creates all necessary components automatically. 
+
+## Session Entry - 2024-12-19
+
+### User Request
+User encountered SCP permission denied errors when trying to upload data files to the EC2 instance:
+```
+scp -r -i loader.key ../data/* ec2-user@52.30.252.221:/data
+scp: dest open "/data/2024-results-by-constituency.csv": Permission denied
+scp: failed to upload file ../data/2024-results-by-constituency.csv to /data
+```
+
+### Issue Analysis
+The cloud-init script was creating the `/data` directory and mounting the EBS volume, but not setting proper ownership and permissions for the `ec2-user` to write to it. The directory was owned by root, preventing SCP operations.
+
+### Solution Applied
+Updated the `voters/infra/aws/data-loader/cloud-init.sh` script to add proper ownership and permissions after mounting the EBS volume:
+
+```bash
+# Set proper ownership and permissions for ec2-user
+echo "Setting ownership and permissions on $MOUNTPOINT..."
+chown ec2-user:ec2-user $MOUNTPOINT
+chmod 755 $MOUNTPOINT
+```
+
+This change was applied to both:
+1. The main `mount_ebs_volume()` function in the cloud-init script
+2. The `mount_ebs_volume()` function in the delayed setup script (`/usr/local/bin/voters-setup-delayed.sh`)
+
+### Files Modified
+- `voters/infra/aws/data-loader/cloud-init.sh` - Added ownership and permission settings for `/data` directory
+
+### Next Steps
+The user will need to redeploy the EC2 instance with the updated cloud-init script to apply these permission changes, or manually fix the permissions on the existing instance by running:
+```bash
+sudo chown ec2-user:ec2-user /data
+sudo chmod 755 /data
+```
+
+## Session Entry - 2024-12-19 (Part 2)
+
+### User Request
+User requested to:
+1. Create a Terraform configuration for an admin role with Administrator privileges
+2. Assign this role to the data-loader instance
+3. Rename the instance from "data-loader" to "manager" as it will be used for more than just data loading
+
+### Solution Applied
+Completely updated the Terraform configuration to:
+
+1. **Renamed all resources** from "data-loader" to "manager":
+   - `aws_instance.data_loader` → `aws_instance.manager`
+   - `aws_security_group.data_loader` → `aws_security_group.manager`
+   - `aws_iam_role.data_loader_role` → `aws_iam_role.manager_admin_role`
+   - `aws_iam_instance_profile.data_loader_profile` → `aws_iam_instance_profile.manager_profile`
+   - All resource names, tags, and descriptions updated
+
+2. **Created Admin Role with Administrator privileges**:
+   - Added `aws_iam_role.manager_admin_role` with EC2 assume role policy
+   - Added `aws_iam_role_policy_attachment.manager_admin_policy` attaching `AdministratorAccess` policy
+   - Updated instance profile to use the admin role
+   - Added `iam_instance_profile` attribute to the EC2 instance
+
+3. **Updated outputs**:
+   - Added `admin_role_arn` and `admin_role_name` outputs
+   - Updated all existing outputs to reflect manager naming
+
+4. **Updated cloud-init script**:
+   - Updated comments and service names to reflect manager naming
+   - Changed systemd service from `voters-setup.service` to `voters-manager.service`
+
+### Files Modified
+- `voters/infra/aws/data-loader/main.tf` - Complete rename and admin role creation
+- `voters/infra/aws/data-loader/outputs.tf` - Updated outputs and added admin role outputs
+- `voters/infra/aws/data-loader/cloud-init.sh` - Updated naming in comments and systemd service
+
+### Security Note
+The manager instance now has full Administrator privileges via the attached IAM role. This provides maximum flexibility for management tasks but should be used carefully and only when necessary.
+
+### Next Steps
+Run `terraform apply` to create the new manager instance with admin privileges. The old data-loader instance will be destroyed and replaced with the new manager instance. 

@@ -32,3 +32,5 @@ loader.key
 
 # AWS Credentials
 infra/aws/creds.sh
+
+./**/.venv

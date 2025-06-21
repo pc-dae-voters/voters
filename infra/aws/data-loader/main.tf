@@ -47,9 +47,9 @@ data "terraform_remote_state" "data_volume" {
   }
 }
 
-# SSH key pair for the data loader instance
+# SSH key pair for the manager instance
 # Using the manually created key pair
-data "aws_key_pair" "data_loader_key_pair" {
+data "aws_key_pair" "manager_key_pair" {
   key_name = "voters-data-loader-key-manual"
 }
 
@@ -74,9 +74,9 @@ data "http" "my_ip" {
   url = "https://ipv4.icanhazip.com"
 }
 
-# Security group for the data loader instance
-resource "aws_security_group" "data_loader" {
-  name_prefix = "voters-data-loader-"
+# Security group for the manager instance
+resource "aws_security_group" "manager" {
+  name_prefix = "voters-manager-"
   vpc_id      = data.terraform_remote_state.vpc.outputs.vpc_id
 
   # SSH access from your IP only
@@ -98,13 +98,13 @@ resource "aws_security_group" "data_loader" {
   }
 
   tags = {
-    Name = "voters-data-loader-sg"
+    Name = "voters-manager-sg"
   }
 }
 
-# IAM role for the EC2 instance
-resource "aws_iam_role" "data_loader_role" {
-  name = "voters-data-loader-role"
+# IAM admin role for the EC2 instance with Administrator privileges
+resource "aws_iam_role" "manager_admin_role" {
+  name = "voters-manager-admin-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -120,21 +120,27 @@ resource "aws_iam_role" "data_loader_role" {
   })
 }
 
+# Attach Administrator policy to the admin role
+resource "aws_iam_role_policy_attachment" "manager_admin_policy" {
+  role       = aws_iam_role.manager_admin_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
 # IAM instance profile
-resource "aws_iam_instance_profile" "data_loader_profile" {
-  name = "voters-data-loader-profile"
-  role = aws_iam_role.data_loader_role.name
+resource "aws_iam_instance_profile" "manager_profile" {
+  name = "voters-manager-admin-profile"
+  role = aws_iam_role.manager_admin_role.name
 }
 
 # Cloud-init configuration
-data "cloudinit_config" "data_loader" {
+data "cloudinit_config" "manager" {
   gzip          = false
   base64_encode = true
 
   part {
     content_type = "text/x-shellscript"
     content      = templatefile("${path.module}/cloud-init.sh", {
-      db_host     = data.terraform_remote_state.db.outputs.db_instance_endpoint
+      db_host     = replace(data.terraform_remote_state.db.outputs.db_instance_endpoint, ":5432", "")
       db_name     = data.terraform_remote_state.db.outputs.db_name
       db_username = data.terraform_remote_state.db.outputs.db_username
       db_password = data.terraform_remote_state.db.outputs.db_password
@@ -144,13 +150,14 @@ data "cloudinit_config" "data_loader" {
 }
 
 # EC2 instance
-resource "aws_instance" "data_loader" {
+resource "aws_instance" "manager" {
   ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = var.instance_type
   subnet_id              = data.terraform_remote_state.vpc.outputs.public_subnet_ids[0]
-  vpc_security_group_ids = [aws_security_group.data_loader.id]
-  key_name               = data.aws_key_pair.data_loader_key_pair.key_name
-  user_data_base64       = data.cloudinit_config.data_loader.rendered
+  vpc_security_group_ids = [aws_security_group.manager.id]
+  key_name               = data.aws_key_pair.manager_key_pair.key_name
+  user_data_base64       = data.cloudinit_config.manager.rendered
+  iam_instance_profile   = aws_iam_instance_profile.manager_profile.name
 
   root_block_device {
     volume_size = var.root_volume_size
@@ -158,12 +165,12 @@ resource "aws_instance" "data_loader" {
   }
 
   tags = {
-    Name = "voters-data-loader-${formatdate("YYYY-MM-DD-HH-MM", timestamp())}"
+    Name = "voters-manager-${formatdate("YYYY-MM-DD-HH-MM", timestamp())}"
   }
 
   lifecycle {
     replace_triggered_by = [
-      data.cloudinit_config.data_loader
+      data.cloudinit_config.manager
     ]
   }
 }
@@ -172,6 +179,6 @@ resource "aws_instance" "data_loader" {
 resource "aws_volume_attachment" "data" {
   device_name = "/dev/xvdf"
   volume_id   = data.terraform_remote_state.data_volume.outputs.volume_id
-  instance_id = aws_instance.data_loader.id
+  instance_id = aws_instance.manager.id
   force_detach = true
 } 
