@@ -29,9 +29,6 @@ yum install -y \
     jq \
     --allowerasing
 
-# Start and enable PostgreSQL client services
-systemctl enable postgresql15
-systemctl start postgresql15
 
 # Create database environment file
 echo "Creating database environment file..."
@@ -45,8 +42,6 @@ export PGDATABASE="${db_name}"
 export PGUSER="${db_username}"
 export PGPASSWORD="${db_password}"
 EOF
-
-chmod +x /home/ec2-user/infra/aws/db/db-env.sh
 
 # Clone the project
 echo "Cloning the voters project..."

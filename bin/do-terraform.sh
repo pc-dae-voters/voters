@@ -18,6 +18,7 @@ function usage() {
     echo "  --path <path>    Path to the Terraform module folder (e.g., 'infra/db'). Overrides <module>."
     echo "  --plan           Generate a plan. (Default action if no command)."
     echo "  --apply          Apply a plan. (Default action if no command)."
+    echo "  --destroy        Destroy resources. Works with --plan and --apply."
     echo "  --debug          Enable debug mode (set -x)."
     exit 1
 }
@@ -28,6 +29,7 @@ COMMAND=""
 TERRAFORM_ARGS=()
 PLAN=false
 APPLY=false
+DESTROY=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -41,6 +43,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --apply)
             APPLY=true
+            shift
+            ;;
+        --destroy)
+            DESTROY=true
             shift
             ;;
         --debug)
@@ -96,25 +102,43 @@ source "${PROJECT_ROOT}/bin/intelligent-init.sh"
 
 # Determine which terraform command to run
 if [[ "$COMMAND" == "plan" || "$PLAN" == true ]]; then
-    echo "Executing: terraform plan"
-    terraform plan "${TERRAFORM_ARGS[@]}"
+    if [[ "$DESTROY" == true ]]; then
+        echo "Executing: terraform plan -destroy"
+        terraform plan -destroy "${TERRAFORM_ARGS[@]}"
+    else
+        echo "Executing: terraform plan"
+        terraform plan "${TERRAFORM_ARGS[@]}"
+    fi
 elif [[ "$COMMAND" == "apply" || "$APPLY" == true ]]; then
-    echo "Executing: terraform apply"
-    terraform apply "${TERRAFORM_ARGS[@]}"
-    if [[ -f "post.sh" ]]; then
-        echo "Found post.sh, executing..."
-        source ./post.sh
+    if [[ "$DESTROY" == true ]]; then
+        echo "Executing: terraform apply -destroy"
+        terraform apply -destroy "${TERRAFORM_ARGS[@]}"
+        echo "Destroy completed. Skipping post.sh execution."
+    else
+        echo "Executing: terraform apply"
+        terraform apply "${TERRAFORM_ARGS[@]}"
+        if [[ -f "post.sh" ]]; then
+            echo "Found post.sh, executing..."
+            source ./post.sh
+        fi
     fi
 elif [[ -n "$COMMAND" ]]; then # Any other command
     echo "Executing: terraform ${COMMAND}"
     terraform "${COMMAND}" "${TERRAFORM_ARGS[@]}"
 else # Default action if no command specified
-    echo "No command specified, running default plan and apply..."
-    terraform plan -out=default.tfplan
-    terraform apply default.tfplan
-    if [[ -f "post.sh" ]]; then
-        echo "Found post.sh, executing..."
-        source ./post.sh
+    if [[ "$DESTROY" == true ]]; then
+        echo "No command specified, running default destroy plan and apply..."
+        terraform plan -destroy -out=default.tfplan
+        terraform apply default.tfplan
+        echo "Destroy completed. Skipping post.sh execution."
+    else
+        echo "No command specified, running default plan and apply..."
+        terraform plan -out=default.tfplan
+        terraform apply default.tfplan
+        if [[ -f "post.sh" ]]; then
+            echo "Found post.sh, executing..."
+            source ./post.sh
+        fi
     fi
 fi
 

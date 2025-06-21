@@ -49,6 +49,11 @@ resource "aws_key_pair" "data_loader_key_pair" {
   public_key = tls_private_key.data_loader_key.public_key_openssh
 }
 
+# Use the manually created key pair instead
+data "aws_key_pair" "data_loader_key_pair" {
+  key_name = "voters-data-loader-key-manual"
+}
+
 # Get latest Amazon Linux 2023 AMI
 data "aws_ami" "amazon_linux_2023" {
   most_recent = true
@@ -145,7 +150,7 @@ resource "aws_instance" "data_loader" {
   instance_type          = var.instance_type
   subnet_id              = data.terraform_remote_state.vpc.outputs.public_subnet_ids[0]
   vpc_security_group_ids = [aws_security_group.data_loader.id]
-  key_name               = aws_key_pair.data_loader_key_pair.key_name
+  key_name               = data.aws_key_pair.data_loader_key_pair.key_name
   user_data_base64       = data.cloudinit_config.data_loader.rendered
 
   root_block_device {
