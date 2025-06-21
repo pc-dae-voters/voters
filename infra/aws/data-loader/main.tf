@@ -122,9 +122,9 @@ resource "aws_iam_instance_profile" "data_loader_profile" {
   role = aws_iam_role.data_loader_role.name
 }
 
-# Cloud-init script to set up the instance
+# Cloud-init configuration
 data "cloudinit_config" "data_loader" {
-  gzip          = true
+  gzip          = false
   base64_encode = true
 
   part {
@@ -134,7 +134,7 @@ data "cloudinit_config" "data_loader" {
       db_name     = data.terraform_remote_state.db.outputs.db_name
       db_username = data.terraform_remote_state.db.outputs.db_username
       db_password = data.terraform_remote_state.db.outputs.db_password
-      project_url = var.project_git_url
+      timestamp   = timestamp()
     })
   }
 }

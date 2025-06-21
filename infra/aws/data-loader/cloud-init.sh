@@ -2,6 +2,7 @@
 
 # Cloud-init script for Voters Data Loader EC2 instance
 # This script installs all necessary software and runs the database setup
+# Timestamp: ${timestamp}
 
 set -e
 
@@ -11,6 +12,8 @@ yum update -y
 
 # Install required packages
 echo "Installing required packages..."
+# Remove curl-minimal first to avoid conflicts on ECS-optimized AMI
+yum remove -y curl-minimal || true
 yum install -y \
     git \
     java-21-amazon-corretto \
@@ -23,7 +26,8 @@ yum install -y \
     unzip \
     wget \
     curl \
-    jq
+    jq \
+    --allowerasing
 
 # Start and enable PostgreSQL client services
 systemctl enable postgresql15
@@ -31,8 +35,8 @@ systemctl start postgresql15
 
 # Create database environment file
 echo "Creating database environment file..."
-mkdir -p /home/ec2-user/infra/db
-cat > /home/ec2-user/infra/db/db-env.sh << 'EOF'
+mkdir -p /home/ec2-user/infra/aws/db
+cat > /home/ec2-user/infra/aws/db/db-env.sh << 'EOF'
 #!/bin/bash
 # Database connection environment variables
 export PGHOST="${db_host}"
@@ -42,12 +46,12 @@ export PGUSER="${db_username}"
 export PGPASSWORD="${db_password}"
 EOF
 
-chmod +x /home/ec2-user/infra/db/db-env.sh
+chmod +x /home/ec2-user/infra/aws/db/db-env.sh
 
 # Clone the project
 echo "Cloning the voters project..."
 cd /home/ec2-user
-git clone ${project_url} pc-dae-voters
+git clone https://github.com/pc-dae-voters/voters.git pc-dae-voters
 cd pc-dae-voters
 
 # Set up Python virtual environment
@@ -65,7 +69,7 @@ set -e
 cd /home/ec2-user/pc-dae-voters
 
 # Source database environment
-source infra/db/db-env.sh
+source infra/aws/db/db-env.sh
 
 echo "Creating database tables..."
 ./bin/create-tables.sh
@@ -84,7 +88,7 @@ set -e
 cd /home/ec2-user/pc-dae-voters
 
 # Source database environment
-source infra/db/db-env.sh
+source infra/aws/db/db-env.sh
 
 echo "Loading data into database..."
 ./bin/load-data.sh
