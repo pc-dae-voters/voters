@@ -59,7 +59,7 @@ All backend.tf files now consistently use the new bucket name that matches the t
 
 **Response:** Created a complete EC2-based data loader solution with the following components:
 
-**Data Loader Infrastructure (`voters/infra/aws/data-loader/`):**
+**Data Loader Infrastructure (`voters/infra/aws/mgr-vm/`):**
 - **main.tf**: EC2 instance configuration with security group, IAM role, and cloud-init setup
 - **variables.tf**: Configurable variables for region, AMI, instance type, volume size, and project URL
 - **backend.tf**: Terraform state configuration using the new "dae-voters-tfstate" bucket
@@ -104,7 +104,7 @@ All backend.tf files now consistently use the new bucket name that matches the t
 
 **Assistant**: Explained how the `${db_...}` variables are set through Terraform's `templatefile` function:
 
-1. **Terraform Remote State Data Sources**: The `data-loader` module reads database configuration from the `db` module's remote state
+1. **Terraform Remote State Data Sources**: The `mgr-vm` module reads database configuration from the `db` module's remote state
 2. **Templatefile Function**: The `templatefile` function passes database values as variables to the cloud-init script
 3. **Variable Substitution**: The function replaces `${db_host}`, `${db_name}`, `${db_username}`, and `${db_password}` with actual values from database module outputs
 
@@ -114,9 +114,9 @@ The flow is: Database module creates RDS instance and outputs connection details
 
 **Assistant**: Confirmed understanding and offered to help with any other infrastructure or database setup tasks.
 
-### User: I've destroying infra/aws/data-loader and recreated it
+### User: I've destroying infra/aws/mgr-vm and recreated it
 
-**Assistant**: Helped troubleshoot SSH connection issues with the newly recreated data-loader instance. The user was getting "Permission denied (publickey)" errors when trying to SSH into the new instance at 34.242.221.12. 
+**Assistant**: Helped troubleshoot SSH connection issues with the newly recreated mgr-vm instance. The user was getting "Permission denied (publickey)" errors when trying to SSH into the new instance at 34.242.221.12. 
 
 Investigated the key pair mismatch issue by:
 - Checking the private key format and permissions
@@ -144,7 +144,7 @@ Clarified that the current issue is key authentication failure, not host key ver
 
 **Assistant**: Verified the updated credentials are working by running `aws sts get-caller-identity`. Confirmed authentication as `paul.carlton@dae.mn` with AWS account `499395681035`. 
 
-Offered to help with next steps including SSH access to the data-loader instance or running Terraform operations.
+Offered to help with next steps including SSH access to the mgr-vm instance or running Terraform operations.
 
 ### User: How do I tell how long these credentials are good for
 
@@ -164,7 +164,7 @@ Tested the updated credentials file and confirmed it works correctly. This setup
 ### User: is still broken
 
 **Assistant**: Helped troubleshoot the persistent SSH connection issue by:
-- Destroying and recreating the data-loader infrastructure with fresh key pair
+- Destroying and recreating the mgr-vm infrastructure with fresh key pair
 - Identifying key pair mismatch between private key and AWS-registered public key
 - Creating a manual key pair using `ssh-keygen` and importing it to AWS
 - Updating Terraform configuration to use the manual key pair via data source
@@ -174,7 +174,7 @@ The issue was resolved by using a manually created key pair instead of the Terra
 
 ### User: That worked
 
-**Assistant**: Confirmed successful SSH connection to the data-loader instance at 18.203.238.51. The key pair mismatch issue was resolved by using a manual key pair and updating the Terraform configuration accordingly.
+**Assistant**: Confirmed successful SSH connection to the mgr-vm instance at 18.203.238.51. The key pair mismatch issue was resolved by using a manual key pair and updating the Terraform configuration accordingly.
 
 Provided the working SSH command with ignore options for host key verification.
 
@@ -239,7 +239,7 @@ scp: failed to upload file ../data/2024-results-by-constituency.csv to /data
 The cloud-init script was creating the `/data` directory and mounting the EBS volume, but not setting proper ownership and permissions for the `ec2-user` to write to it. The directory was owned by root, preventing SCP operations.
 
 ### Solution Applied
-Updated the `voters/infra/aws/data-loader/cloud-init.sh` script to add proper ownership and permissions after mounting the EBS volume:
+Updated the `voters/infra/aws/mgr-vm/cloud-init.sh` script to add proper ownership and permissions after mounting the EBS volume:
 
 ```bash
 # Set proper ownership and permissions for ec2-user
@@ -253,7 +253,7 @@ This change was applied to both:
 2. The `mount_ebs_volume()` function in the delayed setup script (`/usr/local/bin/voters-setup-delayed.sh`)
 
 ### Files Modified
-- `voters/infra/aws/data-loader/cloud-init.sh` - Added ownership and permission settings for `/data` directory
+- `voters/infra/aws/mgr-vm/cloud-init.sh` - Added ownership and permission settings for `/data` directory
 
 ### Next Steps
 The user will need to redeploy the EC2 instance with the updated cloud-init script to apply these permission changes, or manually fix the permissions on the existing instance by running:
@@ -295,12 +295,70 @@ Completely updated the Terraform configuration to:
    - Changed systemd service from `voters-setup.service` to `voters-manager.service`
 
 ### Files Modified
-- `voters/infra/aws/data-loader/main.tf` - Complete rename and admin role creation
-- `voters/infra/aws/data-loader/outputs.tf` - Updated outputs and added admin role outputs
-- `voters/infra/aws/data-loader/cloud-init.sh` - Updated naming in comments and systemd service
+- `voters/infra/aws/mgr-vm/main.tf` - Complete rename and admin role creation
+- `voters/infra/aws/mgr-vm/outputs.tf` - Updated outputs and added admin role outputs
+- `voters/infra/aws/mgr-vm/cloud-init.sh` - Updated naming in comments and systemd service
 
 ### Security Note
 The manager instance now has full Administrator privileges via the attached IAM role. This provides maximum flexibility for management tasks but should be used carefully and only when necessary.
 
 ### Next Steps
 Run `terraform apply` to create the new manager instance with admin privileges. The old data-loader instance will be destroyed and replaced with the new manager instance. 
+
+## Session Entry - 2024-12-19 (Part 3)
+
+### User Request
+User requested to rename the infrastructure directory from `infra/aws/data-loader` to `infra/aws/mgr-vm` to better reflect its new purpose as a manager VM.
+
+### Solution Applied
+1. **Renamed directory**: Moved `voters/infra/aws/data-loader/` to `voters/infra/aws/mgr-vm/`
+2. **Updated backend configuration**: Changed the Terraform state key from `data-loader/terraform.tfstate` to `mgr-vm/terraform.tfstate` in `backend.tf`
+3. **Updated documentation**: Updated all references in the session log to reflect the new directory path
+
+### Files Modified
+- Directory renamed: `voters/infra/aws/data-loader/` → `voters/infra/aws/mgr-vm/`
+- `voters/infra/aws/mgr-vm/backend.tf` - Updated state key
+- `voters/docs/AI/session_log.md` - Updated all path references
+
+### Next Steps
+The infrastructure is now properly organized under the `mgr-vm` directory name. All Terraform operations should now be run from the `voters/infra/aws/mgr-vm/` directory. 
+
+## Session Entry - 2024-12-19 (Part 4)
+
+### User Request
+User requested to make the output of the `db-query.sh` script more readable, as the current tab-separated format was hard to read.
+
+### Issue Analysis
+The original `db-query.sh` script used `psql -t -A` flags which produce tab-separated output that's difficult to read, especially for table layouts.
+
+### Solution Applied
+Created an improved version of the `db-query.sh` script with the following changes:
+
+1. **Better table layout formatting**: Changed from `psql -t -A -c "\d \"$TABLE\""` to `psql -c "\d \"$TABLE\""` for expanded, readable output
+2. **Improved row display**: Changed from tab-separated to expanded format when showing table rows
+3. **Maintained count functionality**: Kept the simple count output as it was already readable
+
+### Files Modified
+- `voters/infra/aws/mgr-vm/improved-db-query.sh` - Created improved version
+- Updated the script on the instance: `~/pc-dae-voters/bin/db-query.sh`
+
+### Results
+The table layout output now shows:
+- Proper column formatting with headers
+- Data types, constraints, and defaults clearly displayed
+- Indexes and foreign key relationships
+- Much more readable format compared to the previous tab-separated output
+
+### Example Output
+Before: `id|integer||not null|nextval('citizen_id_seq'::regclass)`
+After: 
+```
+                              Table "public.citizen"
+  Column   |  Type   | Collation | Nullable |               Default               
+-----------+---------+-----------+----------+-------------------------------------
+ id        | integer |           | not null | nextval('citizen_id_seq'::regclass)
+ status_id | integer |           |          | 
+```
+
+### Next Steps
+The improved script is now active on the instance and provides much better readability for database queries. 
