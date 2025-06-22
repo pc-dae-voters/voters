@@ -125,11 +125,24 @@ else
     
     # Execute the Python script on the remote instance to get file information
     echo "Scanning remote files..."
-    remote_file_info=$(ssh -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 ec2-user@"$INSTANCE_IP" "python3 /tmp/get-remote-files.py")
+    remote_json_file=$(ssh -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 ec2-user@"$INSTANCE_IP" "python3 /tmp/get-remote-files.py")
     
-    # Parse the JSON output
-    if [[ -z "$remote_file_info" ]]; then
+    # Check if we got a filename back
+    if [[ -z "$remote_json_file" ]]; then
         echo "Error: Failed to get remote file information" >&2
+        exit 1
+    fi
+    
+    # Download the JSON file from the remote instance
+    echo "Downloading remote file information..."
+    local_json_file=$(mktemp)
+    scp -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@"$INSTANCE_IP:$remote_json_file" "$local_json_file"
+    
+    # Check if jq is available
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "Error: jq is required but not installed. Please install jq to use this script." >&2
+        echo "On macOS: brew install jq" >&2
+        echo "On Ubuntu/Debian: sudo apt-get install jq" >&2
         exit 1
     fi
     
@@ -152,28 +165,18 @@ else
         local_size=$(stat -c%s "$local_file" 2>/dev/null || stat -f%z "$local_file" 2>/dev/null)
         local_mtime=$(stat -c%Y "$local_file" 2>/dev/null || stat -f%m "$local_file" 2>/dev/null)
         
-        # Check if file exists in remote file info
+        # Check if file exists in remote file info using jq
         remote_exists=false
         remote_size=""
         remote_mtime=""
         
-        # Extract remote file info using jq (if available) or grep/sed
-        if command -v jq >/dev/null 2>&1; then
-            # Use jq if available
-            remote_file_data=$(echo "$remote_file_info" | jq -r ".[\"$rel_path\"]" 2>/dev/null || echo "")
-            if [[ -n "$remote_file_data" && "$remote_file_data" != "null" ]]; then
-                remote_exists=true
-                remote_size=$(echo "$remote_file_data" | jq -r '.size' 2>/dev/null || echo "")
-                remote_mtime=$(echo "$remote_file_data" | jq -r '.mtime' 2>/dev/null || echo "")
-            fi
-        else
-            # Fallback to grep/sed for JSON parsing
-            remote_file_data=$(echo "$remote_file_info" | grep -A 3 "\"$rel_path\"" || echo "")
-            if [[ -n "$remote_file_data" ]]; then
-                remote_exists=true
-                remote_size=$(echo "$remote_file_data" | grep '"size"' | sed 's/.*"size": \([0-9]*\).*/\1/')
-                remote_mtime=$(echo "$remote_file_data" | grep '"mtime"' | sed 's/.*"mtime": \([0-9.]*\).*/\1/')
-            fi
+        # Use jq to check if the file exists in the JSON data
+        remote_file_data=$(jq -r ".[\"$rel_path\"]" "$local_json_file" 2>/dev/null || echo "null")
+        
+        if [[ -n "$remote_file_data" && "$remote_file_data" != "null" ]]; then
+            remote_exists=true
+            remote_size=$(echo "$remote_file_data" | jq -r '.size' 2>/dev/null || echo "")
+            remote_mtime=$(echo "$remote_file_data" | jq -r '.mtime' 2>/dev/null || echo "")
         fi
         
         # Convert timestamps to integers for comparison
@@ -214,6 +217,10 @@ else
             ((skipped_count++))
         fi
     done
+    
+    # Clean up temporary files
+    rm -f "$local_json_file"
+    ssh -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 ec2-user@"$INSTANCE_IP" "rm -f $remote_json_file /tmp/get-remote-files.py"
     
     echo ""
     echo "Summary:"

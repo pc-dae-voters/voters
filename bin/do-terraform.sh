@@ -4,7 +4,8 @@
 # Version: 2.1
 # Author: Gemini (Daemon Consulting Software Engineer)
 
-set -euo pipefail
+# Temporarily removed set -euo pipefail to debug script flow
+# set -euo pipefail
 
 function usage() {
     echo "usage: ${0} [<module>] [<command>] [options]" >&2
@@ -106,6 +107,16 @@ fi
 # Run intelligent init
 source "${PROJECT_ROOT}/bin/intelligent-init.sh"
 
+# --- Post-init Script ---
+if [[ -f "post-init.sh" ]]; then
+    echo "Found post-init.sh, executing..."
+    source ./post-init.sh
+    echo "post-init.sh completed"
+fi
+
+echo "About to determine terraform command to run..."
+echo "COMMAND='$COMMAND', PLAN=$PLAN, APPLY=$APPLY, DESTROY=$DESTROY"
+
 # Determine which terraform command to run
 if [[ "$COMMAND" == "plan" || "$PLAN" == true ]]; then
     if [[ "$DESTROY" == true ]]; then
@@ -140,6 +151,13 @@ else # Default action if no command specified
     else
         echo "No command specified, running default plan and apply..."
         terraform plan -out=default.tfplan
+        
+        # --- Pre-apply Script ---
+        if [[ -f "pre-apply.sh" ]]; then
+            echo "Found pre-apply.sh, executing..."
+            source ./pre-apply.sh
+        fi
+        
         terraform apply default.tfplan
         if [[ -f "post.sh" ]]; then
             echo "Found post.sh, executing..."

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 Remote file information collector for the Voters Manager instance.
-This script runs on the remote instance and outputs file information in JSON format.
+This script runs on the remote instance and creates a JSON file with file information.
 """
 
 import os
 import json
 import sys
+import tempfile
 from pathlib import Path
 from datetime import datetime
 
@@ -62,16 +63,21 @@ def get_file_info(data_dir="/data"):
     return file_info
 
 def main():
-    """Main function to collect and output file information."""
+    """Main function to collect file information and write to JSON file."""
     # Get file information
     file_info = get_file_info()
     
-    # Output as JSON to stdout
+    # Create a temporary file in /tmp
     try:
-        json.dump(file_info, sys.stdout, indent=2)
-        sys.stdout.write('\n')  # Add newline at end
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', prefix='remote_files_', delete=False, dir='/tmp') as f:
+            json.dump(file_info, f, indent=2)
+            temp_filename = f.name
+        
+        # Output the filename to stdout (this is what the upload script will capture)
+        print(temp_filename)
+        
     except Exception as e:
-        print(f"Error outputting JSON: {e}", file=sys.stderr)
+        print(f"Error creating JSON file: {e}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":

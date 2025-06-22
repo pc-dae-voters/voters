@@ -2,7 +2,7 @@
 
 # Cloud-init script for Voters Manager EC2 instance
 # This script installs all necessary software and runs the database setup
-# Timestamp: ${timestamp}
+# Version: ${version}
 
 set -e
 

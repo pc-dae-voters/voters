@@ -56,7 +56,7 @@ resource "tls_private_key" "manager_key" {
 
 # Register the public key with AWS
 resource "aws_key_pair" "manager_key_pair" {
-  key_name   = "voters-manager-key-${formatdate("YYYY-MM-DD-HH-MM", timestamp())}"
+  key_name   = "voters-manager-key"
   public_key = tls_private_key.manager_key.public_key_openssh
 }
 
@@ -151,7 +151,7 @@ data "cloudinit_config" "manager" {
       db_name     = data.terraform_remote_state.db.outputs.db_name
       db_username = data.terraform_remote_state.db.outputs.db_username
       db_password = data.terraform_remote_state.db.outputs.db_password
-      timestamp   = timestamp()
+      version     = var.cloud_init_version
     })
   }
 }
@@ -172,14 +172,8 @@ resource "aws_instance" "manager" {
   }
 
   tags = {
-    Name = "voters-manager-${formatdate("YYYY-MM-DD-HH-MM", timestamp())}"
+    Name = "voters-manager"
     email = "paul.carlton@dae.mn"
-  }
-
-  lifecycle {
-    replace_triggered_by = [
-      data.cloudinit_config.manager
-    ]
   }
 }
 

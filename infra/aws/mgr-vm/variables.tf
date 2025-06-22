@@ -32,4 +32,10 @@ variable "additional_ssh_cidrs" {
   description = "Additional CIDR blocks allowed SSH access to the manager instance"
   type        = list(string)
   default     = []
+}
+
+variable "cloud_init_version" {
+  description = "Version number for cloud-init configuration. Increment this to force cloud-init to run again."
+  type        = string
+  default     = "1.0"
 } 
