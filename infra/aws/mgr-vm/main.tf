@@ -166,6 +166,7 @@ resource "aws_instance" "manager" {
 
   tags = {
     Name = "voters-manager-${formatdate("YYYY-MM-DD-HH-MM", timestamp())}"
+    email = "paul.carlton@dae.mn"
   }
 
   lifecycle {

@@ -10,7 +10,17 @@ output "public_ip" {
 
 output "ssh_command" {
   description = "SSH command to connect to the instance"
+  value       = "ssh -i YOUR_KEY_FILE.pem ec2-user@${aws_instance.manager.public_ip}"
+}
+
+output "ssh_command_loader_key" {
+  description = "SSH command using loader.key (if available)"
   value       = "ssh -i loader.key ec2-user@${aws_instance.manager.public_ip}"
+}
+
+output "ssh_command_generic" {
+  description = "SSH command with common options"
+  value       = "ssh -i YOUR_KEY_FILE.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@${aws_instance.manager.public_ip}"
 }
 
 output "admin_role_arn" {
