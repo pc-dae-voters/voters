@@ -227,40 +227,71 @@ The data loader instance is fully functional and ready for data loading operatio
 
 ## Session Entry - 2024-12-19
 
-### User Request
-User encountered SCP permission denied errors when trying to upload data files to the EC2 instance:
-```
-scp -r -i loader.key ../data/* ec2-user@52.30.252.221:/data
-scp: dest open "/data/2024-results-by-constituency.csv": Permission denied
-scp: failed to upload file ../data/2024-results-by-constituency.csv to /data
-```
+### User Request: Update upload-data.sh to check local files against remote instance
+**User**: I dont want to remove local files, I want to iterate over the local files and verify that the file is present on the instance, if so don't upload
 
-### Issue Analysis
-The cloud-init script was creating the `/data` directory and mounting the EBS volume, but not setting proper ownership and permissions for the `ec2-user` to write to it. The directory was owned by root, preventing SCP operations.
+**Assistant Response**: Updated `voters/bin/upload-data.sh` to implement incremental upload behavior that:
+- Iterates through local files and checks if they exist on the remote instance
+- Only uploads files that don't already exist on the remote instance
+- Never removes any files from the remote instance
+- Provides a summary showing how many files were uploaded vs skipped
+- Removed the previous logic that would delete remote files missing locally
 
-### Solution Applied
-Updated the `voters/infra/aws/mgr-vm/cloud-init.sh` script to add proper ownership and permissions after mounting the EBS volume:
+**Changes Made**:
+- Removed file deletion logic from the script
+- Added counters to track uploaded vs skipped files
+- Simplified to check-only approach for remote file existence
+- Added summary output showing upload statistics
+- Version bumped to 1.2
 
-```bash
-# Set proper ownership and permissions for ec2-user
-echo "Setting ownership and permissions on $MOUNTPOINT..."
-chown ec2-user:ec2-user $MOUNTPOINT
-chmod 755 $MOUNTPOINT
-```
+**Files Modified**:
+- `voters/bin/upload-data.sh` - Updated incremental upload logic
 
-This change was applied to both:
-1. The main `mount_ebs_volume()` function in the cloud-init script
-2. The `mount_ebs_volume()` function in the delayed setup script (`/usr/local/bin/voters-setup-delayed.sh`)
+### User Request: Enhance upload-data.sh with file size and modification time checking
+**User**: You might want to additionally check the file size locally and remotely as well as modification time and upload files which have a more recent local modification time or are different sizes
 
-### Files Modified
-- `voters/infra/aws/mgr-vm/cloud-init.sh` - Added ownership and permission settings for `/data` directory
+**Assistant Response**: Enhanced `voters/bin/upload-data.sh` to implement smart incremental upload with comprehensive file comparison:
+- Compares local and remote file sizes
+- Compares local and remote modification times
+- Uploads files that are newer locally or have different sizes
+- Provides detailed reasoning for each upload decision
+- Cross-platform compatible (Linux and macOS stat formats)
+- Enhanced output with visual indicators for different file states
 
-### Next Steps
-The user will need to redeploy the EC2 instance with the updated cloud-init script to apply these permission changes, or manually fix the permissions on the existing instance by running:
-```bash
-sudo chown ec2-user:ec2-user /data
-sudo chmod 755 /data
-```
+**Changes Made**:
+- Added file size comparison logic
+- Added modification time comparison logic
+- Enhanced output with detailed reasons for uploads
+- Added visual indicators: + (new), 🔄 (modified), ✓ (up to date)
+- Improved summary with separate counts for new vs modified files
+- Cross-platform compatibility for stat and date commands
+- Version bumped to 1.3
+
+**Files Modified**:
+- `voters/bin/upload-data.sh` - Enhanced with smart file comparison logic
+
+### User Request: Add additional SSH CIDR support to mgr-vm Terraform
+**User**: I want the mgr-vm terraform to accept a list of cidrs that are allowed access, default value is an empty list. It should add the current ip address as at present plus this list to the ingress security group.
+
+**Assistant Response**: Enhanced the mgr-vm Terraform configuration to support additional SSH CIDR blocks while maintaining current IP access:
+- Added `additional_ssh_cidrs` variable of type `list(string)` with empty list default
+- Modified security group to use `concat()` function combining current IP with additional CIDRs
+- Created example terraform.tfvars file showing usage patterns
+- Added comprehensive README documentation for the mgr-vm module
+- Maintained backward compatibility with existing deployments
+
+**Changes Made**:
+- Added new variable `additional_ssh_cidrs` in `variables.tf`
+- Updated security group ingress rule in `main.tf` to include additional CIDRs
+- Created `terraform.tfvars.example` with usage examples
+- Created `README.md` with comprehensive documentation
+- Security group now allows SSH from current IP + any additional CIDRs specified
+
+**Files Modified**:
+- `voters/infra/aws/mgr-vm/variables.tf` - Added additional_ssh_cidrs variable
+- `voters/infra/aws/mgr-vm/main.tf` - Updated security group configuration
+- `voters/infra/aws/mgr-vm/terraform.tfvars.example` - Created example configuration
+- `voters/infra/aws/mgr-vm/README.md` - Created comprehensive documentation
 
 ## Session Entry - 2024-12-19 (Part 2)
 
@@ -498,3 +529,149 @@ Enhanced the cloud-init script to install both Terraform and AWS CLI v2:
 
 ### Next Steps
 After the next instance deployment, the manager instance will have Terraform and AWS CLI available for direct infrastructure management operations. 
+
+## Session Entry - 2024-12-19 (Part 8)
+
+### User Request
+User noticed that the `db-query.sh` script was still displaying table layouts in the old hard-to-read tab-separated format, despite previous improvements being made.
+
+### Issue Analysis
+The improved `db-query.sh` script had been created but the changes were not committed and pushed to the repository. The instance was still using the old version with `psql -t -A` flags that produce tab-separated output.
+
+### Solution Applied
+1. **Updated `db-query.sh` script**:
+   - Changed table layout query from `psql -t -A -c "\d \"$TABLE\""` to `psql -c "\d \"$TABLE\""`
+   - Changed row display query from `psql -t -A -c "SELECT * FROM \"$TABLE\" LIMIT $SHOW_ROWS;"` to `psql -c "SELECT * FROM \"$TABLE\" LIMIT $SHOW_ROWS;"`
+   - Kept count query as simple format since it's just a single number
+
+2. **Committed and pushed changes**:
+   - Added the updated script to git
+   - Committed with message: "Improve db-query.sh table layout display with expanded psql format"
+   - Pushed to repository for instance to pull
+
+### Files Modified
+- `voters/bin/db-query.sh` - Updated psql commands to use expanded format
+
+### Results
+The improved script now displays table layouts in a much more readable format:
+- **Before**: `id|integer||not null|nextval('citizen_id_seq'::regclass)`
+- **After**: 
+  ```
+                              Table "public.citizen"
+    Column   |  Type   | Collation | Nullable |               Default               
+  -----------+---------+-----------+----------+-------------------------------------
+   id        | integer |           | not null | nextval('citizen_id_seq'::regclass)
+   status_id | integer |           |          | 
+  ```
+
+### Next Steps
+The user can now pull the latest changes on the instance (`git pull`) to get the improved `db-query.sh` script with better table layout display. 
+
+## Session Entry - 2024-12-19 (Part 9)
+
+### User Request: Update upload-data.sh to check local files against remote instance
+**User**: I dont want to remove local files, I want to iterate over the local files and verify that the file is present on the instance, if so don't upload
+
+**Assistant Response**: Updated `voters/bin/upload-data.sh` to implement incremental upload behavior that:
+- Iterates through local files and checks if they exist on the remote instance
+- Only uploads files that don't already exist on the remote instance
+- Never removes any files from the remote instance
+- Provides a summary showing how many files were uploaded vs skipped
+- Removed the previous logic that would delete remote files missing locally
+
+**Changes Made**:
+- Removed file deletion logic from the script
+- Added counters to track uploaded vs skipped files
+- Simplified to check-only approach for remote file existence
+- Added summary output showing upload statistics
+- Version bumped to 1.2
+
+**Files Modified**:
+- `voters/bin/upload-data.sh` - Updated incremental upload logic
+
+### User Request: Enhance upload-data.sh with file size and modification time checking
+**User**: You might want to additionally check the file size locally and remotely as well as modification time and upload files which have a more recent local modification time or are different sizes
+
+**Assistant Response**: Enhanced `voters/bin/upload-data.sh` to implement smart incremental upload with comprehensive file comparison:
+- Compares local and remote file sizes
+- Compares local and remote modification times
+- Uploads files that are newer locally or have different sizes
+- Provides detailed reasoning for each upload decision
+- Cross-platform compatible (Linux and macOS stat formats)
+- Enhanced output with visual indicators for different file states
+
+**Changes Made**:
+- Added file size comparison logic
+- Added modification time comparison logic
+- Enhanced output with detailed reasons for uploads
+- Added visual indicators: + (new), 🔄 (modified), ✓ (up to date)
+- Improved summary with separate counts for new vs modified files
+- Cross-platform compatibility for stat and date commands
+- Version bumped to 1.3
+
+**Files Modified**:
+- `voters/bin/upload-data.sh` - Enhanced with smart file comparison logic
+
+### User Request: Add additional SSH CIDR support to mgr-vm Terraform
+**User**: I want the mgr-vm terraform to accept a list of cidrs that are allowed access, default value is an empty list. It should add the current ip address as at present plus this list to the ingress security group.
+
+**Assistant Response**: Enhanced the mgr-vm Terraform configuration to support additional SSH CIDR blocks while maintaining current IP access:
+- Added `additional_ssh_cidrs` variable of type `list(string)` with empty list default
+- Modified security group to use `concat()` function combining current IP with additional CIDRs
+- Created example terraform.tfvars file showing usage patterns
+- Added comprehensive README documentation for the mgr-vm module
+- Maintained backward compatibility with existing deployments
+
+**Changes Made**:
+- Added new variable `additional_ssh_cidrs` in `variables.tf`
+- Updated security group ingress rule in `main.tf` to include additional CIDRs
+- Created `terraform.tfvars.example` with usage examples
+- Created `README.md` with comprehensive documentation
+- Security group now allows SSH from current IP + any additional CIDRs specified
+
+**Files Modified**:
+- `voters/infra/aws/mgr-vm/variables.tf` - Added additional_ssh_cidrs variable
+- `voters/infra/aws/mgr-vm/main.tf` - Updated security group configuration
+- `voters/infra/aws/mgr-vm/terraform.tfvars.example` - Created example configuration
+- `voters/infra/aws/mgr-vm/README.md` - Created comprehensive documentation
+
+### User Request: Fix upload-data.sh script hanging issue
+**User**: upload-data is still not working, script gets stuck after processing first file (.DS_Store)
+
+**Assistant Response**: Fixed critical issues in `voters/bin/upload-data.sh` that were causing the script to hang:
+- Eliminated subshell issues with variable scope by removing temporary script approach
+- Fixed while loop variable increment problems using process substitution
+- Added connection timeouts to prevent SSH/SCP hanging
+- Improved file handling for filenames with spaces and special characters
+- Streamlined logic and removed complex date formatting that could cause issues
+
+**Changes Made**:
+- Removed temporary script creation/execution approach
+- Used process substitution `< <(find ... -print0)` with `read -d ''` for proper file handling
+- Added `-o ConnectTimeout=10` to all SSH and SCP commands
+- Simplified reason messages and removed complex date formatting
+- Fixed variable scope issues with counters
+- Version bumped to 1.4
+
+**Files Modified**:
+- `voters/bin/upload-data.sh` - Fixed hanging and variable scope issues
+
+### User Request: Continue fixing upload-data.sh script processing issue
+**User**: still not working - script processes only one file and stops
+
+**Assistant Response**: Identified and resolved the core issue with `voters/bin/upload-data.sh`:
+- Discovered that the script was actually working correctly but processing slowly due to SSH connections
+- Fixed process substitution issues by switching to `mapfile` approach for better reliability
+- Added debugging output to confirm script was processing all 211 files found
+- Cleaned up debug output and confirmed script is functioning as intended
+- Script now properly processes all files with smart incremental upload logic
+
+**Changes Made**:
+- Replaced process substitution with `mapfile` for more reliable file array handling
+- Added file count display to show progress
+- Removed excessive debug output that was cluttering the interface
+- Confirmed script processes all 211 files in the data directory
+- Script now works correctly but may be slow due to individual SSH connections per file
+
+**Files Modified**:
+- `voters/bin/upload-data.sh` - Fixed file processing loop and improved reliability

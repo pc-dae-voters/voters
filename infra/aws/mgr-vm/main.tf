@@ -86,13 +86,13 @@ resource "aws_security_group" "manager" {
   name_prefix = "voters-manager-"
   vpc_id      = data.terraform_remote_state.vpc.outputs.vpc_id
 
-  # SSH access from your IP only
+  # SSH access from your IP and additional CIDRs
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.my_ip.response_body)}/32"]
-    description = "SSH access from user IP"
+    cidr_blocks = concat(["${chomp(data.http.my_ip.response_body)}/32"], var.additional_ssh_cidrs)
+    description = "SSH access from user IP and additional CIDRs"
   }
 
   # Allow all outbound traffic

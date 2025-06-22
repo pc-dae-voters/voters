@@ -26,4 +26,10 @@ variable "project_git_url" {
   description = "Git URL for the voters project"
   type        = string
   default     = "https://github.com/pc-dae-voters.git"
+}
+
+variable "additional_ssh_cidrs" {
+  description = "Additional CIDR blocks allowed SSH access to the manager instance"
+  type        = list(string)
+  default     = []
 } 

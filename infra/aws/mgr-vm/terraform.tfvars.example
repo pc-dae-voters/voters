@@ -1,0 +1,20 @@
+# Example terraform.tfvars file for the Voters Manager VM
+# Copy this file to terraform.tfvars and modify as needed
+
+# AWS region
+region = "eu-west-1"
+
+# EC2 instance type
+instance_type = "t3.medium"
+
+# Root volume size in GB
+root_volume_size = 50
+
+# Additional CIDR blocks allowed SSH access
+# Examples:
+# additional_ssh_cidrs = ["192.168.1.0/24", "10.0.0.0/8"]
+# additional_ssh_cidrs = ["203.0.113.0/24"]  # Office network
+additional_ssh_cidrs = []
+
+# Git URL for the voters project
+project_git_url = "https://github.com/pc-dae-voters.git" 
