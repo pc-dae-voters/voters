@@ -52,7 +52,7 @@ def load_first_names_with_gender_to_table(conn, first_names_data, cursor):
     skipped_count = 0
     error_count = 0
     
-    sql = "INSERT INTO first_names (name, gender) VALUES (%s, %s) ON CONFLICT (name) DO NOTHING;"
+    sql = "INSERT INTO first-names (name, gender) VALUES (%s, %s) ON CONFLICT (name) DO NOTHING;"
     for name, gender in first_names_data:
         if not name: # Skip empty names
             continue
@@ -63,7 +63,7 @@ def load_first_names_with_gender_to_table(conn, first_names_data, cursor):
             else:
                 skipped_count += 1
         except psycopg2.Error as e:
-            print(f"DB Error inserting name '{name}' (gender: {gender}) into first_names: {e}", file=sys.stderr)
+            print(f"DB Error inserting name '{name}' (gender: {gender}) into first-names: {e}", file=sys.stderr)
             conn.rollback() # Rollback this insert, but continue with others
             error_count += 1
         else:
@@ -147,7 +147,7 @@ def main():
         print(f"Unique surnames collected: {len(unique_surnames)}")
 
         with conn.cursor() as cursor:
-            print("\nLoading first names into 'first_names' table...")
+            print("\nLoading first names into 'first-names' table...")
             # Convert dict to list of tuples for the new function
             first_names_list_with_gender = sorted(list(unique_first_names_data.items()))
             fn_inserted, fn_skipped, fn_errors = load_first_names_with_gender_to_table(conn, first_names_list_with_gender, cursor)
@@ -163,6 +163,10 @@ def main():
             sys.exit(1)
         else:
             print("\nName loading completed successfully.")
+
+        print("Warning: No male-specific first names found in 'first-names' table.", file=sys.stderr)
+        print("Warning: No female-specific first names found in 'first-names' table.", file=sys.stderr)
+        print("Warning: No neutral/unspecified-gender first names found in 'first-names' table.", file=sys.stderr)
 
     except psycopg2.Error as e:
         print(f"A critical PostgreSQL error occurred: {e}", file=sys.stderr)

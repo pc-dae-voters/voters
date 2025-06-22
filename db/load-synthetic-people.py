@@ -44,7 +44,7 @@ def get_first_name_ids_by_gender(conn):
     neutral_ids = []
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT id, gender FROM first_names;")
+            cursor.execute("SELECT id, gender FROM first-names;")
             results = cursor.fetchall()
             for id_val, gender_val in results:
                 if gender_val == 'M':
@@ -55,11 +55,11 @@ def get_first_name_ids_by_gender(conn):
                     neutral_ids.append(id_val)
             
             if not male_ids:
-                print("Warning: No male-specific first names found in 'first_names' table.", file=sys.stderr)
+                print("Warning: No male-specific first names found in 'first-names' table.", file=sys.stderr)
             if not female_ids:
-                print("Warning: No female-specific first names found in 'first_names' table.", file=sys.stderr)
+                print("Warning: No female-specific first names found in 'first-names' table.", file=sys.stderr)
             if not neutral_ids:
-                print("Warning: No neutral/unspecified-gender first names found in 'first_names' table.", file=sys.stderr)
+                print("Warning: No neutral/unspecified-gender first names found in 'first-names' table.", file=sys.stderr)
                 
     except psycopg2.Error as e:
         print(f"Database error fetching first names by gender: {e}", file=sys.stderr)
