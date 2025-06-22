@@ -30,6 +30,9 @@ voters/target
 # SSH Keys
 loader.key
 
+# Instance IP address (dynamic)
+infra/aws/mgr-vm/instance-ip.txt
+
 # AWS Credentials
 infra/aws/creds.sh
 
