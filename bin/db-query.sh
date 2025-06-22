@@ -93,7 +93,7 @@ source "${ENV_FILE}"
 if [[ "$SHOW_LAYOUT" == true ]]; then
     echo
     echo "--- Table Layout for '${TABLE}' ---"
-    psql -t -A -c "\d \"$TABLE\"" | cat
+    psql -c "\d \"$TABLE\"" | cat
 fi
 
 if [[ "$SHOW_COUNT" == true ]]; then
@@ -105,5 +105,5 @@ fi
 if (( SHOW_ROWS > 0 )); then
     echo
     echo "--- First ${SHOW_ROWS} rows from '${TABLE}' ---"
-    psql -t -A -c "SELECT * FROM \"$TABLE\" LIMIT $SHOW_ROWS;" | cat
+    psql -c "SELECT * FROM \"$TABLE\" LIMIT $SHOW_ROWS;" | cat
 fi 
