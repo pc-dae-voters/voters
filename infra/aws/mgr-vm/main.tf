@@ -48,9 +48,16 @@ data "terraform_remote_state" "data_volume" {
 }
 
 # SSH key pair for the manager instance
-# Using the manually created key pair
-data "aws_key_pair" "manager_key_pair" {
-  key_name = "voters-data-loader-key-manual"
+# Generate a new private key
+resource "tls_private_key" "manager_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Register the public key with AWS
+resource "aws_key_pair" "manager_key_pair" {
+  key_name   = "voters-manager-key-${formatdate("YYYY-MM-DD-HH-MM", timestamp())}"
+  public_key = tls_private_key.manager_key.public_key_openssh
 }
 
 # Get latest Amazon Linux 2023 AMI

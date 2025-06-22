@@ -8,6 +8,12 @@ output "public_ip" {
   value       = aws_instance.manager.public_ip
 }
 
+output "private_key" {
+  description = "The private key for SSH access"
+  value       = tls_private_key.manager_key.private_key_pem
+  sensitive   = true
+}
+
 output "ssh_command" {
   description = "SSH command to connect to the instance"
   value       = "ssh -i YOUR_KEY_FILE.pem ec2-user@${aws_instance.manager.public_ip}"
