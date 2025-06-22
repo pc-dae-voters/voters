@@ -162,7 +162,7 @@ resource "aws_instance" "manager" {
   instance_type          = var.instance_type
   subnet_id              = data.terraform_remote_state.vpc.outputs.public_subnet_ids[0]
   vpc_security_group_ids = [aws_security_group.manager.id]
-  key_name               = data.aws_key_pair.manager_key_pair.key_name
+  key_name               = aws_key_pair.manager_key_pair.key_name
   user_data_base64       = data.cloudinit_config.manager.rendered
   iam_instance_profile   = aws_iam_instance_profile.manager_profile.name
 
