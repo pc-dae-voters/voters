@@ -96,6 +96,12 @@ fi
 cd "${MODULE_PATH}"
 echo "Running Terraform in ${PWD}..."
 
+# --- Pre-execution Script ---
+if [[ -f "pre.sh" ]]; then
+    echo "Found pre.sh, executing..."
+    source ./pre.sh
+fi
+
 # --- Command Logic ---
 # Run intelligent init
 source "${PROJECT_ROOT}/bin/intelligent-init.sh"

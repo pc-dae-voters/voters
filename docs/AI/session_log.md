@@ -414,3 +414,87 @@ User discovered that the `voters` table was not being created during the cloud-i
 
 ### Next Steps
 The database schema is now consistent and all tables should create successfully when running `./bin/create-tables.sh`. 
+
+## Session Entry - 2024-12-19 (Part 6)
+
+### User Request
+User encountered an EBS volume attachment error during Terraform deployment: "VolumeInUse: vol-069a819e66305591c is already attached to an instance". User requested to update the Terraform workflow to handle this automatically by adding a `pre.sh` script execution before Terraform operations.
+
+### Issue Analysis
+When replacing the manager instance, the EBS volume remained attached to the old instance, preventing Terraform from attaching it to the new instance. This required manual intervention to detach the volume.
+
+### Solution Applied
+1. **Updated `do-terraform.sh` script**:
+   - Added pre-execution script support: checks for `pre.sh` in the module directory
+   - Executes `pre.sh` before running Terraform operations
+   - Maintains existing `post.sh` functionality
+
+2. **Created `pre.sh` script for mgr-vm**:
+   - Automatically detects if the EBS volume is attached to another instance
+   - Safely detaches the volume using AWS CLI with `--force` flag
+   - Waits for volume to be available before proceeding
+   - Handles edge cases (no volume, already attached to current instance)
+
+3. **Resolved existing resource conflicts**:
+   - Imported existing IAM role and instance profile into Terraform state
+   - Successfully deployed new manager instance with admin privileges
+
+### Files Modified
+- `voters/bin/do-terraform.sh` - Added pre.sh script execution
+- `voters/infra/aws/mgr-vm/pre.sh` - Created volume detachment script
+
+### Results
+- **New manager instance deployed successfully**:
+  - Instance ID: `i-0e939989f7e7d3004`
+  - Public IP: `3.255.158.205`
+  - Admin role with Administrator privileges attached
+  - EBS volume successfully attached
+- **Automated volume management**: Future instance replacements will automatically handle volume detachment
+- **Improved workflow**: No more manual intervention required for volume conflicts
+
+### Technical Details
+The `pre.sh` script:
+- Queries the data-volume remote state to get the volume ID
+- Uses AWS CLI to check volume attachment status
+- Compares with current instance ID to avoid unnecessary detachment
+- Uses `aws ec2 detach-volume --force` for safe detachment
+- Waits for volume availability with `aws ec2 wait volume-available`
+
+### Next Steps
+The manager instance is now fully operational with admin privileges and proper volume management. The pre.sh script will automatically handle volume conflicts in future deployments. 
+
+## Session Entry - 2024-12-19 (Part 7)
+
+### User Request
+User requested to update the cloud-init script to install Terraform and AWS CLI on the manager instance so that Terraform operations can be run directly from the instance.
+
+### Solution Applied
+Enhanced the cloud-init script to install both Terraform and AWS CLI v2:
+
+1. **Terraform Installation**:
+   - Downloads Terraform v1.7.0 from HashiCorp releases
+   - Installs to `/usr/local/bin/terraform`
+   - Verifies installation with `terraform version`
+
+2. **AWS CLI v2 Installation**:
+   - Downloads AWS CLI v2 from Amazon
+   - Installs using the official installer
+   - Verifies installation with `aws --version`
+
+### Files Modified
+- `voters/infra/aws/mgr-vm/cloud-init.sh` - Added Terraform and AWS CLI installation
+
+### Benefits
+- **Self-contained management**: The manager instance can now run Terraform operations directly
+- **AWS CLI access**: Full AWS CLI functionality for management tasks
+- **No external dependencies**: All tools needed for infrastructure management are available on the instance
+- **Consistent environment**: All team members can use the same tools and versions
+
+### Technical Details
+- Terraform v1.7.0 installed from official HashiCorp releases
+- AWS CLI v2 installed using official Amazon installer
+- Both tools installed to system-wide locations (`/usr/local/bin/`)
+- Installation verified during cloud-init execution
+
+### Next Steps
+After the next instance deployment, the manager instance will have Terraform and AWS CLI available for direct infrastructure management operations. 

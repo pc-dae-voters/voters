@@ -73,6 +73,42 @@ yum install -y \
     jq \
     --allowerasing
 
+# Install Terraform
+echo "Installing Terraform..."
+TERRAFORM_VERSION="1.7.0"
+TERRAFORM_ZIP="terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+TERRAFORM_URL="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/${TERRAFORM_ZIP}"
+
+cd /tmp
+wget "$TERRAFORM_URL"
+unzip "$TERRAFORM_ZIP"
+mv terraform /usr/local/bin/
+chmod +x /usr/local/bin/terraform
+rm "$TERRAFORM_ZIP"
+
+# Verify Terraform installation
+echo "Verifying Terraform installation..."
+terraform version
+
+echo "Terraform ${TERRAFORM_VERSION} installed successfully!"
+
+# Install AWS CLI v2
+echo "Installing AWS CLI v2..."
+AWSCLI_ZIP="awscliv2.zip"
+AWSCLI_URL="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+
+cd /tmp
+wget "$AWSCLI_URL" -O "$AWSCLI_ZIP"
+unzip "$AWSCLI_ZIP"
+./aws/install
+rm -rf aws "$AWSCLI_ZIP"
+
+# Verify AWS CLI installation
+echo "Verifying AWS CLI installation..."
+aws --version
+
+echo "AWS CLI v2 installed successfully!"
+
 # Clone the project first
 echo "Cloning the voters project..."
 cd /home/ec2-user
