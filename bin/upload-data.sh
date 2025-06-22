@@ -142,6 +142,22 @@ find "$LOCAL_FOLDER" -type f | while read -r local_file; do
     fi
 done
 
+echo "Checking for files to remove..."
+
+# Get list of files on remote that should be removed
+ssh -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@"$REMOTE_IP" "find /data -type f" 2>/dev/null | while read -r remote_file; do
+    # Get relative path from /data
+    rel_path="${remote_file#/data/}"
+    
+    # Check if file exists locally
+    if [[ -f "$LOCAL_FOLDER/$rel_path" ]]; then
+        echo "  ✓ $rel_path (exists locally, keeping)"
+    else
+        echo "  - $rel_path (missing locally, removing)"
+        ssh -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@"$REMOTE_IP" "rm -f '$remote_file'"
+    fi
+done
+
 echo "Incremental upload completed!"
 EOF
 
