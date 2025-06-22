@@ -76,8 +76,8 @@ yum install -y \
 # Install Terraform
 echo "Installing Terraform..."
 TERRAFORM_VERSION="1.7.0"
-TERRAFORM_ZIP="terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
-TERRAFORM_URL="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/${TERRAFORM_ZIP}"
+TERRAFORM_ZIP="terraform_1.7.0_linux_amd64.zip"
+TERRAFORM_URL="https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip"
 
 cd /tmp
 wget "$TERRAFORM_URL"
@@ -90,7 +90,7 @@ rm "$TERRAFORM_ZIP"
 echo "Verifying Terraform installation..."
 terraform version
 
-echo "Terraform ${TERRAFORM_VERSION} installed successfully!"
+echo "Terraform 1.7.0 installed successfully!"
 
 # Install AWS CLI v2
 echo "Installing AWS CLI v2..."
