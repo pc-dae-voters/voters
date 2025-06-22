@@ -1,13 +1,14 @@
-CREATE TABLE IF NOT EXISTS citizen_changes (
+CREATE TABLE IF NOT EXISTS citizen-changes (
     id SERIAL PRIMARY KEY,
-    citizen_id INTEGER REFERENCES citizen(id),
-    change_date DATE NOT NULL,
+    citizen_id INTEGER NOT NULL,
+    change_date DATE NOT NULL DEFAULT CURRENT_DATE,
     change_type VARCHAR(50) NOT NULL,
-    details JSONB
+    details TEXT,
+    FOREIGN KEY (citizen_id) REFERENCES citizen(id)
 );
 
-COMMENT ON TABLE citizen_changes IS 'Tracks changes to citizen details over time, like name changes, gender reassignment, or corrections.';
-COMMENT ON COLUMN citizen_changes.citizen_id IS 'Reference to the citizen this change applies to.';
-COMMENT ON COLUMN citizen_changes.change_date IS 'The date this change became effective.';
-COMMENT ON COLUMN citizen_changes.change_type IS 'The type of change that occurred.';
-COMMENT ON COLUMN citizen_changes.details IS 'Details about the change.'; 
+COMMENT ON TABLE citizen-changes IS 'Tracks changes to citizen details over time, like name changes, gender reassignment, or corrections.';
+COMMENT ON COLUMN citizen-changes.citizen_id IS 'Reference to the citizen this change applies to.';
+COMMENT ON COLUMN citizen-changes.change_date IS 'The date this change became effective.';
+COMMENT ON COLUMN citizen-changes.change_type IS 'The type of change that occurred.';
+COMMENT ON COLUMN citizen-changes.details IS 'Details about the change.'; 

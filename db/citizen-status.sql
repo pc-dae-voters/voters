@@ -1,11 +1,11 @@
-CREATE TABLE IF NOT EXISTS citizen_status (
+CREATE TABLE IF NOT EXISTS citizen-status (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL
+    status_code CHAR(1) UNIQUE NOT NULL,
+    status_description VARCHAR(255) NOT NULL
 );
 
-INSERT INTO citizen_statuses (status_code, status_description) VALUES
-('B', 'born in UK'),
+INSERT INTO citizen-status (status_code, status_description) VALUES
+('A', 'Active'),
+('B', 'British Citizen'),
 ('N', 'Naturalized'),
-('R', 'Citizenship revoked'),
-('D', 'Citizenship renounced'),
-('F', 'Foreign');
+('F', 'Foreign National');

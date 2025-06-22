@@ -23,7 +23,7 @@ def get_db_connection():
         raise
 
 def load_data_from_csv(conn, table_name, csv_file_path):
-    """Loads data from a CSV file into the con_postcodes table."""
+    """Loads data from a CSV file into the con-postcodes table."""
     csv_postcode_col = 'postcode' 
     csv_con_code_col = 'con_code'
     insert_sql = f"INSERT INTO {table_name} (postcode, con_code) VALUES (%s, %s) ON CONFLICT (postcode) DO UPDATE SET con_code = EXCLUDED.con_code;"
@@ -85,7 +85,7 @@ def main():
     # Note: DB connection arguments are removed, using environment variables.
     parser = argparse.ArgumentParser(description="Load constituency postcode data from CSV.")
     parser.add_argument("--csv-file", required=True, help="Path to the constituency postcodes CSV file.")
-    parser.add_argument("--table", default="con_postcodes", help="Name of the target table.")
+    parser.add_argument("--table", default="con-postcodes", help="Name of the target table.")
     args = parser.parse_args()
 
     conn = get_db_connection()

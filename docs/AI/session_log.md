@@ -362,3 +362,55 @@ After:
 
 ### Next Steps
 The improved script is now active on the instance and provides much better readability for database queries. 
+
+## Session Entry - 2024-12-19 (Part 5)
+
+### User Request
+User discovered that the `voters` table was not being created during the cloud-init setup, despite being referenced in the `create-tables.sh` script. User also requested to rename all tables with underscores to use hyphens instead for consistency.
+
+### Issues Identified
+1. **voters.sql had syntax errors**: Foreign key references to non-existent tables (`citizens` instead of `citizen`, `voter_status(code)` instead of `voter_status(id)`)
+2. **Inconsistent naming**: Tables used underscores instead of hyphens (e.g., `first_names`, `citizen_status`, `voter_status`, `con_postcodes`, `citizen_changes`)
+
+### Solution Applied
+1. **Fixed voters.sql**:
+   - Changed `citizen_id BIGINT` to `citizen_id INTEGER` to match `citizen` table
+   - Changed `voter_status CHAR(1)` to `voter_status_id INTEGER` to match `voter-status` table
+   - Fixed foreign key references to use correct table and column names
+
+2. **Renamed all tables from underscores to hyphens**:
+   - `first_names` → `first-names`
+   - `citizen_status` → `citizen-status`
+   - `voter_status` → `voter-status`
+   - `con_postcodes` → `con-postcodes`
+   - `citizen_changes` → `citizen-changes`
+
+3. **Updated all related files**:
+   - SQL table definitions and comments
+   - Foreign key references in other tables
+   - Python loader scripts (`load-names-from-csv.py`, `load-con-postcodes.py`)
+   - `create-tables.sh` dependency map and file list
+
+4. **Cleaned up temporary files**: Removed temporary files created during troubleshooting
+
+### Files Modified
+- `voters/db/voters.sql` - Fixed foreign key references and data types
+- `voters/db/first-names.sql` - Renamed table and comments
+- `voters/db/citizen-status.sql` - Renamed table and fixed INSERT statement
+- `voters/db/voter_status.sql` - Renamed table
+- `voters/db/con-postcodes.sql` - Renamed table and index
+- `voters/db/citizen-changes.sql` - Renamed table and comments
+- `voters/db/citizen.sql` - Updated foreign key reference
+- `voters/bin/create-tables.sh` - Updated dependency map and file list
+- `voters/db/load-names-from-csv.py` - Updated table references
+- `voters/db/load-con-postcodes.py` - Updated table references
+- Removed temporary files: `voters/infra/aws/mgr-vm/improved-db-query.sh`, `voters/infra/aws/mgr-vm/fixed-voters.sql`
+
+### Results
+- All tables now use consistent hyphenated naming
+- Foreign key references are correct and functional
+- The `voters` table can now be created successfully
+- All loader scripts reference the correct table names
+
+### Next Steps
+The database schema is now consistent and all tables should create successfully when running `./bin/create-tables.sh`. 
