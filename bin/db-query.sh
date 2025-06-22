@@ -14,14 +14,19 @@ SHOW_ROWS=0
 
 # --- Functions ---
 function usage() {
-    echo "usage: ${0} --table <table_name> [--layout] [--count] [--show-rows <n>] [--help] [--debug]" >&2
+    echo "usage: ${0} [--table <table_name>] [--layout] [--count] [--show-rows <n>] [--help] [--debug]" >&2
     echo "This script queries the RDS database. You can combine --layout, --count, and --show-rows." >&2
-    echo "  --table <table_name>  The name of the table to query." >&2
+    echo "  --table <table_name>  The name of the table to query. (Optional - shows all tables if not specified)" >&2
     echo "  --layout              Display the table layout (schema)." >&2
     echo "  --count               Display the number of rows in the table." >&2
     echo "  --show-rows <n>       Display the first 'n' rows of the table." >&2
     echo "  --help                Display this help message." >&2
     echo "  --debug               Enable debug mode (set -x)." >&2
+    echo
+    echo "Examples:" >&2
+    echo "  ${0}                    # Show layout of all tables" >&2
+    echo "  ${0} --table citizen    # Show layout of citizen table" >&2
+    echo "  ${0} --table citizen --count  # Show count of citizen table" >&2
     exit 1
 }
 
@@ -59,14 +64,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Validation ---
-if [[ -z "$TABLE" ]]; then
-    echo "Error: --table is a required argument." >&2
-    usage
-fi
-
 # Default to layout if no action is specified
 if [[ "$SHOW_LAYOUT" == false && "$SHOW_COUNT" == false && $SHOW_ROWS -eq 0 ]]; then
     SHOW_LAYOUT=true
+fi
+
+# If showing rows or count, a table must be specified
+if (( SHOW_ROWS > 0 )) || [[ "$SHOW_COUNT" == true ]]; then
+    if [[ -z "$TABLE" ]]; then
+        echo "Error: --table is required when using --count or --show-rows." >&2
+        usage
+    fi
 fi
 
 # --- Main Logic ---
@@ -91,9 +99,24 @@ source "${ENV_FILE}"
 
 # Construct and execute psql command(s)
 if [[ "$SHOW_LAYOUT" == true ]]; then
-    echo
-    echo "--- Table Layout for '${TABLE}' ---"
-    psql -c "\d \"$TABLE\"" | cat
+    if [[ -z "$TABLE" ]]; then
+        echo
+        echo "--- All Tables Layout ---"
+        psql -c "\dt" | cat
+        echo
+        echo "--- Detailed Layout for All Tables ---"
+        # Get list of all tables and show detailed layout for each
+        TABLES=$(psql -t -A -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;")
+        for table in $TABLES; do
+            echo
+            echo "--- Table Layout for '$table' ---"
+            psql -c "\d \"$table\"" | cat
+        done
+    else
+        echo
+        echo "--- Table Layout for '${TABLE}' ---"
+        psql -c "\d \"$TABLE\"" | cat
+    fi
 fi
 
 if [[ "$SHOW_COUNT" == true ]]; then
