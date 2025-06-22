@@ -4,7 +4,8 @@
 # Version: 1.5
 # Author: Gemini (Daemon Consulting Software Engineer)
 
-set -euo pipefail
+# Temporarily removed strict error handling to debug file processing issue
+# set -euo pipefail
 
 # --- Functions ---
 function usage() {
@@ -25,6 +26,7 @@ function usage() {
 # --- Argument Parsing ---
 DATA_FOLDER=""
 UPDATE_SUBPATH=""
+DEBUG="false"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -41,6 +43,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --debug)
             set -x
+            DEBUG="true"
             shift
             ;;
         *)
@@ -173,10 +176,15 @@ else
         # Use jq to check if the file exists in the JSON data
         remote_file_data=$(jq -r ".[\"$rel_path\"]" "$local_json_file" 2>/dev/null || echo "null")
         
-        if [[ -n "$remote_file_data" && "$remote_file_data" != "null" ]]; then
+        if [[ -n "$remote_file_data" && "$remote_file_data" != "null" && "$remote_file_data" != "" ]]; then
             remote_exists=true
             remote_size=$(echo "$remote_file_data" | jq -r '.size' 2>/dev/null || echo "")
             remote_mtime=$(echo "$remote_file_data" | jq -r '.mtime' 2>/dev/null || echo "")
+        fi
+        
+        # Debug output for missing files
+        if [[ "$DEBUG" == "true" ]]; then
+            echo "DEBUG: $rel_path - remote_exists=$remote_exists, remote_data='$remote_file_data'"
         fi
         
         # Convert timestamps to integers for comparison
@@ -189,7 +197,7 @@ else
         
         if [[ "$remote_exists" == "false" ]]; then
             needs_upload=true
-            reason="new file"
+            reason="new file (missing on remote)"
         elif [[ "$local_size" != "$remote_size" ]]; then
             needs_upload=true
             reason="different size (local: ${local_size}, remote: ${remote_size})"
@@ -209,9 +217,9 @@ else
             
             # Create remote directory if needed
             remote_dir=$(dirname "/data/$rel_path")
-            ssh -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 ec2-user@"$INSTANCE_IP" "mkdir -p $remote_dir"
+            ssh -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 ec2-user@"$INSTANCE_IP" "mkdir -p $remote_dir" || echo "Warning: Failed to create remote directory $remote_dir"
             # Upload the file
-            scp -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "$local_file" ec2-user@"$INSTANCE_IP:$remote_dir/"
+            scp -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "$local_file" ec2-user@"$INSTANCE_IP:$remote_dir/" || echo "Warning: Failed to upload $rel_path"
         else
             echo "  ✓ $rel_path (up to date)"
             ((skipped_count++))

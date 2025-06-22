@@ -164,8 +164,30 @@ cd /home/ec2-user/pc-dae-voters
 # Source database environment
 source infra/db/db-env.sh
 
+# Set default values for data loading arguments
+CON_CSV="${CON_CSV:-/data/parl_constituencies_2025.csv}"
+CON_POSTCODES_CSV="${CON_POSTCODES_CSV:-/data/postcodes_with_con.csv}"
+ADDRESSES_FOLDER="${ADDRESSES_FOLDER:-/data/addresses}"
+NAMES_FOLDER="${NAMES_FOLDER:-/data/names/data}"
+NUM_PEOPLE="${NUM_PEOPLE:-10000}"
+RANDOM_SEED="${RANDOM_SEED:-$RANDOM}"
+
 echo "Loading data into database..."
-./bin/load-data.sh
+echo "Using configuration:"
+echo "  Constituencies CSV: $CON_CSV"
+echo "  Constituency Postcodes CSV: $CON_POSTCODES_CSV"
+echo "  Addresses Folder: $ADDRESSES_FOLDER"
+echo "  Names Folder: $NAMES_FOLDER"
+echo "  Number of People: $NUM_PEOPLE"
+echo "  Random Seed: $RANDOM_SEED"
+
+./bin/load-data.sh \
+  --con-csv "$CON_CSV" \
+  --con-postcodes-csv "$CON_POSTCODES_CSV" \
+  --addresses-folder "$ADDRESSES_FOLDER" \
+  --names-folder "$NAMES_FOLDER" \
+  --num-people "$NUM_PEOPLE" \
+  --random-seed "$RANDOM_SEED"
 
 echo "Data loading completed successfully!"
 EOF

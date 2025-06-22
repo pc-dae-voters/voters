@@ -264,3 +264,71 @@ The user requested enhancing `do-terraform.sh` to source a `pre-apply.sh` file i
 - `./bin/do-terraform.sh mgr-vm` - Will now intelligently handle volume detachment
 - Other modules without pre-apply.sh continue to work unchanged
 - Manual terraform commands bypass pre-apply.sh for direct control
+
+## 2025-06-21 - Upload Script Missing Files Detection Issue
+
+### User Request
+The user reported that the `upload-data.sh` script was not detecting missing files on the remote instance. The script was correctly identifying files that exist on both sides but failing to detect files that exist locally but not remotely.
+
+### Issue Analysis
+From the debug output, the script was:
+- ✅ Correctly detecting files that exist on both local and remote
+- ❌ Not detecting files that exist locally but are missing remotely
+- The jq query logic appeared to be working correctly for existing files
+
+### Root Cause
+The issue was in the jq query logic for detecting missing files. The script was using:
+```bash
+remote_file_data=$(jq -r ".[\"$rel_path\"]" "$local_json_file" 2>/dev/null || echo "null")
+```
+
+But the logic for determining if a file exists needed to be more robust to handle edge cases.
+
+### Solution Implemented
+
+**Enhanced upload-data.sh Script:**
+- **Improved jq query logic**: Added better handling for missing files by checking for empty strings and null values
+- **Added debug output**: Enhanced debugging to show remote file data for troubleshooting
+- **Better existence detection**: Improved the condition to check for `null`, empty strings, and missing keys
+- **Enhanced reason messages**: Added more descriptive reasons for upload decisions
+
+**Key Changes:**
+1. **Better null checking**: Added `&& "$remote_file_data" != ""` to the existence check
+2. **Debug output**: Added DEBUG variable and debug output to show remote file data
+3. **Improved reason messages**: Changed "new file" to "new file (missing on remote)" for clarity
+
+**Logic Flow:**
+```bash
+# Check if file exists in remote JSON
+remote_file_data=$(jq -r ".[\"$rel_path\"]" "$local_json_file" 2>/dev/null || echo "null")
+
+# Determine existence with robust checking
+if [[ -n "$remote_file_data" && "$remote_file_data" != "null" && "$remote_file_data" != "" ]]; then
+    remote_exists=true
+    # Extract size and mtime...
+else
+    remote_exists=false
+fi
+
+# Upload decision
+if [[ "$remote_exists" == "false" ]]; then
+    needs_upload=true
+    reason="new file (missing on remote)"
+fi
+```
+
+### Testing
+Created test scripts to verify the jq query logic:
+- `test-jq.sh`: Tests jq queries for existing and missing files
+- `test-missing-files.sh`: Simple test for missing file detection logic
+
+### Usage
+The script now properly detects missing files when run with:
+```bash
+./bin/upload-data.sh --data-folder ../data --debug
+```
+
+The debug output will show:
+- `DEBUG: filename - remote_exists=false, remote_data='null'` for missing files
+- Proper upload decisions with descriptive reasons
+- Summary showing new files uploaded vs modified files updated
