@@ -3,9 +3,9 @@ spring:
     name: voters-api
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/voters
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:password}
+    url: jdbc:postgresql://${PGHOST:${DB_HOST:localhost}}:${PGPORT:${DB_PORT:5432}}/${PGDATABASE:${DB_NAME:voters}}
+    username: ${PGUSER:${DB_USERNAME:postgres}}
+    password: ${PGPASSWORD:${DB_PASSWORD:password}}
     driver-class-name: org.postgresql.Driver
     
   jpa:
@@ -34,7 +34,7 @@ server:
     
 logging:
   level:
-    com.tesco.ise.voters: DEBUG
+    dae.pc.voters: DEBUG
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE

@@ -1,6 +1,6 @@
-package com.tesco.ise.voters.repository;
+package dae.pc.voters.repository;
 
-import com.tesco.ise.voters.entity.CitizenStatus;
+import dae.pc.voters.entity.CitizenStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
