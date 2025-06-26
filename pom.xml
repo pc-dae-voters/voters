@@ -3,13 +3,12 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.tesco.ise</groupId>
-    <artifactId>email-template-management</artifactId>
+    <groupId>dae.pc</groupId>
+    <artifactId>voter-management</artifactId>
     <version>0.0.1</version>
     <packaging>pom</packaging>
     <modules>
-        <module>contact-api</module>
-        <module>client</module>
+        <module>voters-api</module>
     </modules>
     <properties>
         <java.version>21</java.version>
@@ -17,17 +16,6 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <sonar.coverage.inclusions>
-            client/src/main/**,contact-api/src/main/**
-        </sonar.coverage.inclusions>
-        <sonar.coverage.exclusions>
-            client/src/main/java/com/tesco/ise/template/Client.java,**/*.html
-        </sonar.coverage.exclusions>
-        <sonar.cpd.exclusions>
-            client/src/main/java/com/tesco/ise/template/dto/ContactAPIRequest.java,
-            client/src/main/java/com/tesco/ise/template/dto/Recipient.java,
-            client/src/main/java/com/tesco/ise/template/utils/LogMask.java
-        </sonar.cpd.exclusions>
     </properties>
     <dependencyManagement>
         <dependencies>
