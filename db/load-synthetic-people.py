@@ -516,6 +516,46 @@ def main():
             conn.commit()
             print(f"Parent generation complete. Total children created: {children_created} for {couples_with_children} couples.")
 
+            # --- Divorce Generation ---
+            print("\nStarting divorce generation...")
+            
+            # Get all marriages that don't have a divorce date
+            cursor.execute("""
+                SELECT m.id, m.partner1_id, m.partner2_id, m.married_date, c1.died as partner1_died, c2.died as partner2_died
+                FROM marriages m
+                JOIN citizen c1 ON m.partner1_id = c1.id
+                JOIN citizen c2 ON m.partner2_id = c2.id
+                WHERE m.divorced_date IS NULL
+                AND c1.died IS NULL AND c2.died IS NULL
+                ORDER BY m.married_date
+            """)
+            
+            active_marriages = cursor.fetchall()
+            print(f"Found {len(active_marriages)} active marriages for divorce consideration.")
+            
+            divorces_applied = 0
+            
+            for marriage_id, partner1_id, partner2_id, married_date, partner1_died, partner2_died in active_marriages:
+                # 30% chance of divorce
+                if random.random() < 0.3:
+                    # Calculate divorce date (between marriage date and today)
+                    days_married = (today - married_date).days
+                    if days_married <= 0:
+                        continue
+                    
+                    # Random divorce date between marriage and today
+                    random_days = random.randint(365, days_married)  # At least 1 year married
+                    divorce_date = married_date + timedelta(days=random_days)
+                    
+                    cursor.execute(
+                        "UPDATE marriages SET divorced_date = %s WHERE id = %s;",
+                        (divorce_date, marriage_id)
+                    )
+                    divorces_applied += 1
+            
+            conn.commit()
+            print(f"Divorce generation complete. Total divorces applied: {divorces_applied}.")
+
         print("\nSynthetic data generation completed successfully.")
 
     except psycopg2.Error as e:

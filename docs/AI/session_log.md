@@ -719,3 +719,78 @@ The user requested to add parent generation functionality, creating children for
 - Maintains referential integrity
 
 This enhancement creates realistic family structures with proper parent-child relationships and maintains data consistency across all related tables.
+
+## 2025-01-27 - Divorce Generation and Voter Registration System
+
+### User Request
+The user requested to add divorce generation (30% of marriages), create a voter registration system, remove voter-status table, and ensure married couples share addresses.
+
+### Requirements Identified
+1. **Divorce Generation**: 30% of marriages should have divorce dates
+2. **Voter Registration**: Create voters for citizens over 18 years old
+3. **Schema Changes**: Remove voter_status_id column and voter-status table
+4. **Address Assignment**: Married couples should share the same address
+5. **Registration Logic**: 90% on open register, registration date = 18th birthday
+
+### Solution Implemented
+
+**Updated `voters/db/load-synthetic-people.py`:**
+- **Added divorce generation phase**: Runs after parent generation
+- **Divorce logic**: 30% chance of divorce for active marriages
+- **Divorce timing**: Random date between marriage and today (minimum 1 year married)
+- **Eligibility**: Only applies to marriages where both partners are alive
+
+**Updated `voters/db/voters.sql`:**
+- **Removed**: `voter_status_id INTEGER NOT NULL` column
+- **Removed**: Foreign key reference to voter-status table
+- **Added**: Comprehensive column comments
+- **Maintained**: All other fields (citizen_id, address_id, open_register, registration_date)
+
+**Updated `voters/bin/create-tables.sh**:
+- **Removed**: `["voter-status"]=""` from dependencies
+- **Removed**: `"voter-status.sql"` from SQL_FILES array
+- **Maintained**: All other table dependencies and creation order
+
+**Created `voters/db/load-voters.py`:**
+- **Eligibility check**: Citizens over 18, alive, not already voters
+- **Registration date**: Set to 18th birthday
+- **Open register**: 90% chance of being on open register
+- **Address assignment**: 
+  - Married couples share same address
+  - Single people get random addresses
+- **Progress reporting**: Shows voter creation progress
+
+**Created `voters/bin/run-load-voters.sh`:**
+- **Bash wrapper**: Standardized script interface
+- **Environment setup**: Sources database environment
+- **Error handling**: Proper argument parsing and validation
+- **Executable**: Made script executable for direct use
+
+**Updated `voters/bin/load-data.sh**:
+- **Added voters loader**: Runs after synthetic people generation
+- **Proper sequencing**: Voters created after all citizens exist
+- **Integration**: Seamlessly integrated into data loading pipeline
+
+**Key Features:**
+- **Realistic Divorce Rate**: 30% divorce rate with realistic timing
+- **Complete Voter Registration**: All eligible citizens become voters
+- **Address Sharing**: Married couples live at same address
+- **Simplified Schema**: Removed unnecessary voter-status complexity
+- **Proper Timing**: Registration dates based on 18th birthday
+- **Open Register**: 90% on open register (publicly visible)
+
+**Process Flow:**
+1. Generate citizens and births
+2. Apply mortality simulation
+3. Generate marriages
+4. Generate children
+5. **Apply divorces** (30% of marriages)
+6. **Register voters** (citizens over 18)
+
+**Database Impact:**
+- **Divorce tracking**: Marriage records updated with divorce dates
+- **Voter records**: New voters table populated with registration data
+- **Address relationships**: Married couples share addresses
+- **Schema simplification**: Removed voter-status table and references
+
+This enhancement creates a complete voter registration system with realistic divorce patterns and proper address management for family relationships.

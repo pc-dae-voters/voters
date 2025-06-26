@@ -139,6 +139,9 @@ if [[ -n "$RANDOM_SEED" ]]; then
 fi
 run_loader "run-load-synthetic-people.sh" ${SYNTHETIC_ARGS}
 
+# Load voters for citizens over 18
+run_loader "run-load-voters.sh"
+
 # Deactivate virtual environment
 deactivate
 
