@@ -3,6 +3,7 @@ import argparse
 import sys
 import os
 import random
+import json
 from datetime import datetime, timedelta
 
 # --- Database and Setup Functions ---
@@ -104,6 +105,37 @@ def get_random_dob(today):
 
 def calculate_age(birth_date, today):
     return today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+
+def get_marriage_date(birth_date, today):
+    """Calculate a marriage date between ages 18 and 35."""
+    age_18 = birth_date + timedelta(days=18 * 365.25)
+    age_35 = birth_date + timedelta(days=35 * 365.25)
+    
+    # Ensure marriage date is not in the future
+    max_marriage_date = min(age_35, today)
+    min_marriage_date = max(age_18, birth_date + timedelta(days=16 * 365.25))  # At least 16 years old
+    
+    if min_marriage_date >= max_marriage_date:
+        return None  # Too young to marry
+    
+    # Calculate marriage age distribution
+    rand = random.random()
+    if rand < 0.25:  # 25% marry before 23
+        target_age = random.uniform(18, 23)
+    elif rand < 0.75:  # 50% between 23 and 30
+        target_age = random.uniform(23, 30)
+    else:  # 25% after 30
+        target_age = random.uniform(30, 35)
+    
+    marriage_date = birth_date + timedelta(days=target_age * 365.25)
+    
+    # Ensure marriage date is within valid range
+    if marriage_date < min_marriage_date:
+        marriage_date = min_marriage_date
+    elif marriage_date > max_marriage_date:
+        marriage_date = max_marriage_date
+    
+    return marriage_date
 
 # --- Main Generation Logic ---
 
@@ -250,6 +282,239 @@ def main():
             
             conn.commit() 
             print(f"Mortality simulation complete. Total deaths applied: {deaths_applied}.")
+
+            # --- Marriage Generation ---
+            print("\nStarting marriage generation...")
+            
+            # Get all citizens over 16 who are alive and not married
+            cursor.execute("""
+                SELECT c.id, c.gender, c.surname_id, b.date as birth_date
+                FROM citizen c
+                JOIN births b ON c.id = b.citizen_id
+                WHERE c.died IS NULL 
+                AND EXTRACT(YEAR FROM AGE(CURRENT_DATE, b.date)) >= 16
+                AND c.id NOT IN (
+                    SELECT DISTINCT partner1_id FROM marriages WHERE divorced_date IS NULL
+                    UNION
+                    SELECT DISTINCT partner2_id FROM marriages WHERE divorced_date IS NULL
+                )
+                ORDER BY c.id
+            """)
+            
+            eligible_citizens = cursor.fetchall()
+            print(f"Found {len(eligible_citizens)} eligible citizens for marriage.")
+            
+            marriages_created = 0
+            used_citizens = set()
+            
+            for citizen_id, gender, surname_id, birth_date in eligible_citizens:
+                if citizen_id in used_citizens:
+                    continue
+                
+                # Only 90% of eligible citizens get married
+                if random.random() > 0.9:
+                    continue
+                
+                # Find potential partners
+                potential_partners = []
+                for other_id, other_gender, other_surname_id, other_birth_date in eligible_citizens:
+                    if other_id == citizen_id or other_id in used_citizens:
+                        continue
+                    
+                    # Calculate age difference
+                    age_diff = abs(calculate_age(birth_date, today) - calculate_age(other_birth_date, today))
+                    
+                    # 98% opposite gender, 2% same gender
+                    if random.random() < 0.98:
+                        if gender != other_gender and age_diff <= 10:  # Similar age, opposite gender
+                            potential_partners.append((other_id, other_gender, other_surname_id, other_birth_date))
+                    else:
+                        if gender == other_gender and age_diff <= 10:  # Similar age, same gender
+                            potential_partners.append((other_id, other_gender, other_surname_id, other_birth_date))
+                
+                if potential_partners:
+                    # Select a partner
+                    partner_id, partner_gender, partner_surname_id, partner_birth_date = random.choice(potential_partners)
+                    
+                    # Calculate marriage date
+                    marriage_date = get_marriage_date(birth_date, today)
+                    if marriage_date is None:
+                        continue
+                    
+                    # Create marriage record
+                    cursor.execute(
+                        "INSERT INTO marriages (partner1_id, partner2_id, married_date) VALUES (%s, %s, %s);",
+                        (citizen_id, partner_id, marriage_date)
+                    )
+                    
+                    # Handle surname change for woman marrying man
+                    if gender == 'M' and partner_gender == 'F':
+                        # Get old surname for change record
+                        cursor.execute("SELECT surname_id FROM citizen WHERE id = %s;", (partner_id,))
+                        old_surname_id = cursor.fetchone()[0]
+                        
+                        # Update woman's surname to man's surname
+                        cursor.execute(
+                            "UPDATE citizen SET surname_id = %s WHERE id = %s;",
+                            (surname_id, partner_id)
+                        )
+                        
+                        # Create citizen change record
+                        change_details = {
+                            "change_type": "name_change",
+                            "reason": "marriage",
+                            "old_values": {
+                                "surname_id": old_surname_id
+                            },
+                            "new_values": {
+                                "surname_id": surname_id
+                            },
+                            "marriage_partner_id": citizen_id,
+                            "marriage_date": marriage_date.isoformat()
+                        }
+                        
+                        cursor.execute(
+                            "INSERT INTO citizen-changes (citizen_id, change_date, details) VALUES (%s, %s, %s);",
+                            (partner_id, marriage_date, json.dumps(change_details))
+                        )
+                    
+                    used_citizens.add(citizen_id)
+                    used_citizens.add(partner_id)
+                    marriages_created += 1
+                    
+                    if marriages_created % 50 == 0:
+                        conn.commit()
+                        print(f"  Created {marriages_created} marriages so far...")
+            
+            conn.commit()
+            print(f"Marriage generation complete. Total marriages created: {marriages_created}.")
+
+            # --- Parent Generation ---
+            print("\nStarting parent generation...")
+            
+            # Get married couples (man and woman only) who can have children
+            cursor.execute("""
+                SELECT 
+                    m.id as marriage_id,
+                    m.married_date,
+                    c1.id as husband_id, c1.gender as husband_gender, c1.surname_id as husband_surname_id,
+                    c2.id as wife_id, c2.gender as wife_gender, c2.surname_id as wife_surname_id,
+                    b1.date as husband_birth_date,
+                    b2.date as wife_birth_date
+                FROM marriages m
+                JOIN citizen c1 ON m.partner1_id = c1.id
+                JOIN citizen c2 ON m.partner2_id = c2.id
+                JOIN births b1 ON c1.id = b1.citizen_id
+                JOIN births b2 ON c2.id = b2.citizen_id
+                WHERE m.divorced_date IS NULL
+                AND c1.gender = 'M' AND c2.gender = 'F'
+                AND c1.died IS NULL AND c2.died IS NULL
+                AND EXTRACT(YEAR FROM AGE(m.married_date, b2.date)) <= 35
+                ORDER BY m.married_date
+            """)
+            
+            married_couples = cursor.fetchall()
+            print(f"Found {len(married_couples)} eligible married couples for children.")
+            
+            children_created = 0
+            couples_with_children = 0
+            
+            for marriage_id, married_date, husband_id, husband_gender, husband_surname_id, wife_id, wife_gender, wife_surname_id, husband_birth_date, wife_birth_date in married_couples:
+                # Determine number of children based on distribution
+                rand = random.random()
+                if rand < 0.20:  # 20% have 1 child
+                    num_children = 1
+                elif rand < 0.80:  # 60% have 2 children
+                    num_children = 2
+                else:  # 10% have 3 children
+                    num_children = 3
+                
+                # Calculate wife's age at marriage
+                wife_age_at_marriage = calculate_age(wife_birth_date, married_date)
+                
+                # Generate children
+                for child_num in range(num_children):
+                    # Calculate child birth date (between marriage and wife turning 35)
+                    wife_age_35 = wife_birth_date + timedelta(days=35 * 365.25)
+                    max_child_birth = min(wife_age_35, today)
+                    
+                    if married_date >= max_child_birth:
+                        continue  # Wife would be too old
+                    
+                    # Random birth date between marriage and max_child_birth
+                    days_after_marriage = (max_child_birth - married_date).days
+                    if days_after_marriage <= 0:
+                        continue
+                    
+                    # Add some randomness to birth spacing (9 months to 3 years between children)
+                    min_days_after_marriage = 270 + (child_num * 270)  # 9 months minimum between children
+                    if min_days_after_marriage > days_after_marriage:
+                        continue
+                    
+                    random_days = random.randint(min_days_after_marriage, days_after_marriage)
+                    child_birth_date = married_date + timedelta(days=random_days)
+                    
+                    # Generate child details
+                    child_gender = random.choice(['M', 'F'])
+                    first_name_id = None
+                    
+                    if child_gender == 'M':
+                        if male_first_name_ids:
+                            first_name_id = random.choice(male_first_name_ids)
+                        elif neutral_first_name_ids:
+                            first_name_id = random.choice(neutral_first_name_ids)
+                    elif child_gender == 'F':
+                        if female_first_name_ids:
+                            first_name_id = random.choice(female_first_name_ids)
+                        elif neutral_first_name_ids:
+                            first_name_id = random.choice(neutral_first_name_ids)
+                    
+                    if first_name_id is None:
+                        continue
+                    
+                    # Child gets father's surname
+                    child_surname_id = husband_surname_id
+                    
+                    # Get birth place (use same place as father or random place)
+                    birth_place_id, birth_country_id = random.choice(all_places_with_country)
+                    
+                    # Determine child's citizen status
+                    if birth_country_id == uk_country_id:
+                        child_citizen_status = 'B'
+                    else:
+                        child_citizen_status = 'N' if random.random() < 0.9 else 'F'
+                    
+                    # Get citizen-status ID for the child
+                    cursor.execute("SELECT id FROM citizen-status WHERE code = %s;", (child_citizen_status,))
+                    status_result = cursor.fetchone()
+                    if not status_result:
+                        continue
+                    child_status_id = status_result[0]
+                    
+                    # Create child citizen record
+                    cursor.execute(
+                        "INSERT INTO citizen (status_id, surname_id, first_name_id, gender) VALUES (%s, %s, %s, %s) RETURNING id;",
+                        (child_status_id, child_surname_id, first_name_id, child_gender)
+                    )
+                    child_citizen_id = cursor.fetchone()[0]
+                    
+                    # Create birth record with parent information
+                    cursor.execute(
+                        "INSERT INTO births (citizen_id, surname_id, first_name_id, gender, date, place_id, father_id, mother_id) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s);",
+                        (child_citizen_id, child_surname_id, first_name_id, child_gender, child_birth_date, birth_place_id, husband_id, wife_id)
+                    )
+                    
+                    children_created += 1
+                
+                couples_with_children += 1
+                
+                if couples_with_children % 50 == 0:
+                    conn.commit()
+                    print(f"  Created {children_created} children for {couples_with_children} couples so far...")
+            
+            conn.commit()
+            print(f"Parent generation complete. Total children created: {children_created} for {couples_with_children} couples.")
 
         print("\nSynthetic data generation completed successfully.")
 

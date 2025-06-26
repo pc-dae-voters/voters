@@ -21,6 +21,7 @@ declare -A TABLE_DEPENDENCIES=(
     ["surnames"]=""
     ["births"]="voters"
     ["citizen-changes"]="citizen"
+    ["marriages"]="citizen"
 )
 
 function usage() {
@@ -165,6 +166,7 @@ else
         "surnames.sql"
         "births.sql"
         "citizen-changes.sql"
+        "marriages.sql"
     )
 fi
 

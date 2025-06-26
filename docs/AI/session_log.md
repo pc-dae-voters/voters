@@ -549,3 +549,173 @@ citizen-changes (
 ```
 
 This change provides a more flexible and powerful system for tracking citizen changes while maintaining data integrity and query performance through PostgreSQL's JSONB capabilities.
+
+## 2025-01-27 - Marriage Generation and Surname Change System
+
+### User Request
+The user requested to add generation of marriages and parents, including a marriages table and logic to create marriages between eligible citizens with automatic surname changes for women.
+
+### Requirements Identified
+1. **Marriages Table**: Create table to track marriages and divorces
+2. **Marriage Generation**: Generate marriages for citizens over 16 years old
+3. **Partner Selection**: Find suitable partners with similar age and gender preferences
+4. **Marriage Age Distribution**: 25% before 23, 50% between 23-30, 25% after 30
+5. **Surname Changes**: Automatically change woman's surname when marrying a man
+6. **Change Tracking**: Record surname changes in citizen-changes table
+
+### Solution Implemented
+
+**Created `voters/db/marriages.sql`:**
+```sql
+CREATE TABLE IF NOT EXISTS marriages (
+    id SERIAL PRIMARY KEY,
+    partner1_id INTEGER NOT NULL,
+    partner2_id INTEGER NOT NULL,
+    married_date DATE NOT NULL,
+    divorced_date DATE,
+    FOREIGN KEY (partner1_id) REFERENCES citizen(id),
+    FOREIGN KEY (partner2_id) REFERENCES citizen(id),
+    CHECK (partner1_id != partner2_id)
+);
+```
+
+**Updated `voters/db/load-synthetic-people.py`:**
+- **Added `get_marriage_date()` function**: Calculates marriage dates with age distribution logic
+- **Added marriage generation phase**: Runs after mortality simulation
+- **Partner selection logic**: 
+  - 98% opposite gender, 2% same gender
+  - Age difference ≤ 10 years
+  - Only unmarried, alive citizens over 16
+- **Surname change handling**: 
+  - Updates woman's surname to husband's surname
+  - Creates citizen-changes record with JSON details
+- **Progress reporting**: Shows marriage creation progress
+
+**Key Features:**
+- **Age Distribution**: Realistic marriage age distribution (18-35 years)
+- **Gender Preferences**: 98% heterosexual, 2% same-sex marriages
+- **Automatic Surname Changes**: Women take husband's surname with change tracking
+- **Change Records**: JSON-based citizen-changes records for audit trail
+- **Eligibility Checks**: Only unmarried, alive citizens over 16 can marry
+
+**Example Citizen Change Record:**
+```json
+{
+  "change_type": "name_change",
+  "reason": "marriage",
+  "old_values": {"surname_id": 123},
+  "new_values": {"surname_id": 456},
+  "marriage_partner_id": 789,
+  "marriage_date": "2020-06-15"
+}
+```
+
+**Process Flow:**
+1. Generate citizens and births
+2. Apply mortality simulation
+3. Find eligible citizens (over 16, alive, unmarried)
+4. Match partners based on age and gender preferences
+5. Create marriage records
+6. Update woman's surname and create change record
+7. Mark citizens as married
+
+This enhancement creates realistic marriage patterns and maintains proper change tracking for surname modifications, providing a comprehensive family relationship system.
+
+### Follow-up: Added Marriages Table to Database Setup
+
+**User Request**: The user pointed out that the marriages table needed to be added to the create-tables.sh script.
+
+**Updated `voters/bin/create-tables.sh`:**
+- **Added dependency**: `["marriages"]="citizen"` - marriages table depends on citizen table
+- **Added to SQL_FILES array**: `"marriages.sql"` - included in default table creation order
+- **Proper ordering**: Placed after citizen-changes.sql since it references citizen table
+
+**Key Changes:**
+- **Dependency Management**: Marriages table properly declared as dependent on citizen table
+- **Automatic Creation**: Marriages table will now be created when running `./bin/create-tables.sh`
+- **Correct Ordering**: Table created after citizen table to satisfy foreign key constraints
+
+**Database Setup Flow:**
+1. Create citizen table
+2. Create citizen-changes table  
+3. Create marriages table (with foreign key references to citizen)
+
+This ensures the marriages table is properly created during database initialization and maintains referential integrity with the citizen table.
+
+### Follow-up: Updated Marriage Rate to 90%
+
+**User Request**: The user requested to change the marriage rate so that only 90% of eligible citizens get married instead of trying to marry everyone.
+
+**Updated `voters/db/load-synthetic-people.py`:**
+- **Added marriage rate check**: `if random.random() > 0.9: continue`
+- **Realistic marriage rate**: Only 90% of eligible citizens will attempt to find a partner
+- **Maintains existing logic**: Partner selection and surname changes remain unchanged
+
+**Key Changes:**
+- **Marriage Rate**: Reduced from 100% to 90% of eligible citizens
+- **Realistic Demographics**: Better reflects real-world marriage statistics
+- **Unmarried Population**: 10% of eligible citizens will remain unmarried
+- **Random Selection**: Marriage selection is random, not based on any specific criteria
+
+**Impact:**
+- More realistic population demographics
+- Creates a mix of married and unmarried citizens
+- Maintains all existing marriage logic for those who do marry
+- Better simulation of real-world marriage patterns
+
+This change makes the synthetic data more realistic by ensuring not everyone gets married, which better reflects actual population statistics.
+
+## 2025-01-27 - Parent Generation and Family Relationships
+
+### User Request
+The user requested to add parent generation functionality, creating children for married couples and establishing family relationships.
+
+### Requirements Identified
+1. **Parent Selection**: Find married couples (man and woman only) who can have children
+2. **Child Distribution**: 60% have 2 children, 20% have 1 child, 10% have 3 children
+3. **Birth Timing**: Children born after marriage date but before woman turns 35
+4. **Parent Assignment**: Update birth records with father_id and mother_id
+5. **Child Creation**: Generate additional citizens as needed for children
+
+### Solution Implemented
+
+**Updated `voters/db/load-synthetic-people.py`:**
+- **Added parent generation phase**: Runs after marriage generation
+- **Eligible couple selection**: 
+  - Married couples (M+F only)
+  - Both partners alive
+  - Wife under 35 at marriage
+  - Not divorced
+- **Child distribution logic**:
+  - 20% have 1 child
+  - 60% have 2 children  
+  - 10% have 3 children
+- **Birth timing constraints**:
+  - Children born after marriage date
+  - Before wife turns 35
+  - Minimum 9 months between children
+- **Parent assignment**: Updates birth records with father_id and mother_id
+
+**Key Features:**
+- **Realistic Family Sizes**: Follows specified child distribution
+- **Age Constraints**: Only couples where wife is under 35 at marriage
+- **Birth Spacing**: Minimum 9 months between children
+- **Surname Inheritance**: Children get father's surname
+- **Complete Parentage**: Birth records include both mother and father IDs
+- **Progress Reporting**: Shows child creation progress
+
+**Process Flow:**
+1. Find eligible married couples (M+F, alive, wife under 35)
+2. Determine number of children per couple (1-3 based on distribution)
+3. Calculate child birth dates (after marriage, before wife turns 35)
+4. Generate child citizens with father's surname
+5. Create birth records with parent IDs
+6. Track progress and statistics
+
+**Database Impact:**
+- Creates additional citizen records for children
+- Populates father_id and mother_id in births table
+- Establishes complete family relationships
+- Maintains referential integrity
+
+This enhancement creates realistic family structures with proper parent-child relationships and maintains data consistency across all related tables.
