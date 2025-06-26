@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Master script to run all data loading shell scripts in the correct order.
-# Version: 1.4
+# Version: 1.5
 # Author: Gemini (Daemon Consulting Software Engineer)
 
 set -euo pipefail
@@ -9,7 +9,6 @@ set -euo pipefail
 # --- Default Configuration ---
 CON_CSV=""
 CON_POSTCODES_CSV=""
-PLACES_CSV=""
 ADDRESSES_FOLDER=""
 NAMES_FOLDER=""
 NUM_PEOPLE=1000
@@ -22,7 +21,6 @@ function usage() {
     echo "Options:" >&2
     echo "  --con-csv <path>           Path to constituencies CSV file" >&2
     echo "  --con-postcodes-csv <path> Path to constituency postcodes CSV file" >&2
-    echo "  --places-csv <path>        Path to places CSV file" >&2
     echo "  --addresses-folder <path>  Path to folder containing address CSVs" >&2
     echo "  --names-folder <path>      Path to folder containing name CSVs" >&2
     echo "  --num-people <n>           Number of synthetic people to generate (default: 1000)" >&2
@@ -41,10 +39,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --con-postcodes-csv)
             CON_POSTCODES_CSV="$2"
-            shift 2
-            ;;
-        --places-csv)
-            PLACES_CSV="$2"
             shift 2
             ;;
         --addresses-folder)
@@ -119,8 +113,9 @@ else
     run_loader "run-load-con-postcodes.sh"
 fi
 
-if [[ -n "$PLACES_CSV" ]]; then
-    run_loader "run-load-places.sh" --csv-file "$PLACES_CSV"
+# Places loader now uses addresses folder to extract place names
+if [[ -n "$ADDRESSES_FOLDER" ]]; then
+    run_loader "run-load-places.sh" --addresses-folder "$ADDRESSES_FOLDER"
 else
     run_loader "run-load-places.sh"
 fi

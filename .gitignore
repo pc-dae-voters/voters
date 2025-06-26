@@ -34,6 +34,6 @@ loader.key
 infra/aws/mgr-vm/instance-ip.txt
 
 # AWS Credentials
-infra/aws/creds.sh
+# ... existing code ...
 
 ./**/.venv

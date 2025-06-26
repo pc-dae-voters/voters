@@ -1,9 +1,10 @@
 CREATE TABLE IF NOT EXISTS countries (
-    code CHAR(2) PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL
 );
 
 INSERT INTO countries (name) VALUES
+('Not Specified'),
 ('Afghanistan'),
 ('Albania'),
 ('Algeria'),
@@ -44,7 +45,7 @@ INSERT INTO countries (name) VALUES
 ('Comoros'),
 ('Congo (Congo-Brazzaville)'),
 ('Costa Rica'),
-('Côte d'Ivoire'),
+('Côte d''Ivoire'),
 ('Croatia'),
 ('Cuba'),
 ('Cyprus'),

@@ -9,8 +9,8 @@ cd "$SCRIPT_DIR"
 echo "Running Terraform in $(pwd)..."
 
 # Source credentials if available
-if [ -f "../../infra/aws/creds.sh" ]; then
-    source ../../infra/aws/creds.sh
+if [ -f "../../infra/aws/session.sh" ]; then
+    source ../../infra/aws/session.sh
 fi
 
 # Parse command line arguments

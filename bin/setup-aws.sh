@@ -90,9 +90,20 @@ if [[ ! -f "bin/do-terraform.sh" ]]; then
     exit 1
 fi
 
+# Source AWS session configuration
+log_step "Setting up AWS environment"
+if [[ -f "infra/aws/session.sh" ]]; then
+    echo "Sourcing AWS session configuration..."
+    source infra/aws/session.sh
+    log_success "AWS session configuration loaded"
+else
+    log_warning "AWS session configuration file not found at infra/aws/session.sh"
+fi
+
 # Check if AWS credentials are available
 if ! aws sts get-caller-identity >/dev/null 2>&1; then
-    log_error "AWS credentials not found or invalid. Please run 'source infra/aws/creds.sh' first."
+    log_error "AWS credentials not found or invalid after sourcing session.sh"
+    log_error "Please ensure your AWS credentials are properly configured"
     exit 1
 fi
 

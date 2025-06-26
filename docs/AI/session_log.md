@@ -332,3 +332,220 @@ The debug output will show:
 - `DEBUG: filename - remote_exists=false, remote_data='null'` for missing files
 - Proper upload decisions with descriptive reasons
 - Summary showing new files uploaded vs modified files updated
+
+## 2025-06-21 - Addresses Table Schema Simplification
+
+### User Request
+The user requested simplifying the addresses table schema by replacing the five separate line fields (line1, line2, line3, line4, line5) with a single `address` VARCHAR field.
+
+### Changes Made
+1. **Updated addresses.sql**: 
+   - Replaced `line1 VARCHAR(255), line2 VARCHAR(255), line3 VARCHAR(255), line4 VARCHAR(255), line5 VARCHAR(255)` with `address VARCHAR(500)`
+   - Updated table and column comments to reflect the simplified structure
+   - Modified unique constraint from `(line1, line2, line3, line4, line5, place_id, postcode)` to `(address, place_id, postcode)`
+
+2. **Verified Python Loader Scripts**:
+   - Confirmed `load-addresses.py` already uses the correct schema with single `address` field in INSERT statements
+   - Verified `load-address-places.py` doesn't reference the addresses table directly (only extracts place names)
+   - No other Python scripts needed updates
+
+3. **Checked Database References**:
+   - Confirmed `voters.sql` only references `address_id` foreign key, no schema changes needed
+   - No other SQL files reference the old line1-line5 fields
+
+### Result
+The addresses table now uses a simplified schema with a single `address` field (VARCHAR(500)) instead of five separate line fields, making it easier to work with and more flexible for storing complete address strings. All existing loader scripts were already compatible with this schema.
+
+## 2025-01-27 - AWS Credentials Check Improvement
+
+### User Request
+The user suggested improving the AWS credentials check in `setup-aws.sh` by sourcing `session.sh` first before checking if credentials are working, rather than requiring manual sourcing.
+
+### Issue Identified
+The current script checked for AWS credentials first and then told users to manually run `source infra/aws/session.sh` if credentials weren't available. This was less user-friendly and required manual intervention.
+
+### Solution Implemented
+Modified `voters/bin/setup-aws.sh` to:
+1. **Source session.sh first**: Automatically source the AWS session configuration file
+2. **Then check credentials**: Verify AWS credentials are working after environment setup
+3. **Better error handling**: Provide clearer error messages if credentials are still invalid
+4. **User-friendly flow**: Eliminate the need for manual sourcing before running the script
+
+### Key Changes Made
+- Added automatic sourcing of `infra/aws/session.sh` before credential validation
+- Updated error messages to reflect the new flow
+- Added success message when session configuration is loaded
+- Added warning if session.sh file is not found
+
+This improvement makes the setup script more convenient and reduces the chance of user error by automatically setting up the AWS environment.
+
+## 2025-01-27 - Places Loader Update for Addresses Folder
+
+### User Request
+The user requested to update the places loader to work differently with the addresses folder structure instead of the previous CSV format.
+
+### Requirements Identified
+1. **Input Change**: Command line argument should be a path to the addresses folder instead of a single CSV file
+2. **Data Source**: Extract place names from the Address field in addresses CSV files
+3. **Country Assignment**: All records should use "United Kingdom" as the country
+4. **Place Name Extraction**: Extract place name as the last element in the Address field after comma delimiter
+5. **Special Entry**: Add a "not specified" place entry for the United Kingdom
+
+### Solution Implemented
+Completely rewrote `voters/db/load-places.py` with the following changes:
+
+**New Functionality:**
+- **`extract_place_name(address)`**: Extracts place name from address string by splitting on comma and taking the last element
+- **`process_addresses_folder()`**: Processes all CSV files in the addresses folder to extract unique place names
+- **Folder Processing**: Uses `glob` to find all CSV files in the specified folder
+- **Duplicate Prevention**: Tracks processed places in a set to avoid duplicates across files
+
+**Key Features:**
+- **Automatic File Discovery**: Finds all `*.csv` files in the addresses folder
+- **Address Field Parsing**: Extracts place names from the "Address" column using comma delimiter
+- **United Kingdom Country**: Uses "United Kingdom" country ID for all place records
+- **"Not Specified" Entry**: Automatically adds a "not specified" place entry for the UK
+- **Error Handling**: Robust error handling for file processing and database operations
+- **Progress Reporting**: Shows processing progress and final statistics
+
+**Example Address Processing:**
+- Input: `"23 Bredon View, Headless Cross"`
+- Extracted Place: `"Headless Cross"`
+
+**Usage:**
+```bash
+python load-places.py --addresses-folder /path/to/data/addresses
+```
+
+This update makes the places loader work seamlessly with the existing addresses data structure and automatically extracts all unique place names from the UK address files.
+
+### Follow-up: Updated Bash Scripts for New Interface
+
+**User Request**: The user asked if the loader bash scripts had been updated to work with the new places loader interface.
+
+**Scripts Updated**:
+
+1. **`voters/bin/run-load-places.sh`** (Version 1.4):
+   - Changed from `--csv-file` parameter to `--addresses-folder`
+   - Updated default path from `db/uk-cities.csv` to `data/addresses`
+   - Modified validation to check for directory existence instead of file existence
+   - Updated help text and error messages to reflect new functionality
+
+2. **`voters/bin/load-data.sh`** (Version 1.5):
+   - Removed `--places-csv` parameter from argument parsing
+   - Updated places loader call to use `--addresses-folder` instead of `--csv-file`
+   - Modified help text to remove references to places CSV file
+   - Now passes the same addresses folder to both places loader and addresses loader
+
+**Key Changes**:
+- **Consistent Interface**: Both scripts now use the same addresses folder parameter
+- **Simplified Workflow**: No need for separate places CSV file - place names are extracted from address data
+- **Better Integration**: Places loader and addresses loader can now use the same data source
+- **Updated Documentation**: Help text and error messages reflect the new functionality
+
+**Usage Examples**:
+```bash
+# Run places loader with default addresses folder
+./bin/run-load-places.sh
+
+# Run places loader with custom addresses folder
+./bin/run-load-places.sh --addresses-folder /path/to/addresses
+
+# Run complete data loading with addresses folder
+./bin/load-data.sh --addresses-folder /path/to/addresses
+```
+
+All bash scripts are now consistent with the updated places loader that extracts place names from address CSV files.
+
+## 2025-01-27 - Citizen Table Enhancement and People Loader Update
+
+### User Request
+The user requested to update the citizen table to include surname, firstname and gender fields like in the births table, and update the people loader to populate these fields with the same values as birth records.
+
+### Requirements Identified
+1. **Citizen Table Enhancement**: Add surname_id, first_name_id, and gender fields to match births table structure
+2. **Data Consistency**: Ensure citizen table contains current name and gender information
+3. **People Loader Update**: Modify synthetic people generator to populate citizen table with name and gender data
+4. **Death Tracking**: Add died field to citizen table for mortality simulation
+
+### Solution Implemented
+
+**Updated `voters/db/citizen.sql`:**
+- Added `surname_id INTEGER REFERENCES surnames(id)`
+- Added `first_name_id INTEGER REFERENCES first-names(id)`
+- Added `gender CHAR(1) CHECK (gender IN ('M', 'F'))`
+- Added `died DATE` field for mortality tracking
+- Added comprehensive table and column comments
+
+**Updated `voters/db/load-synthetic-people.py`:**
+- Fixed table name from `citizens` to `citizen`
+- Added logic to get citizen-status ID from status code
+- Updated INSERT statement to include surname_id, first_name_id, and gender
+- Fixed mortality simulation to use correct table name
+- Enhanced error handling for missing citizen status codes
+
+**Key Benefits:**
+- **Easy Access**: Citizen's current name and gender are directly accessible from citizen table
+- **Data Consistency**: Same name and gender values stored in both citizen and births tables
+- **Performance**: No need to join with births table for basic name/gender queries
+- **Flexibility**: Citizen table can be updated independently for name changes while preserving birth records
+
+**Database Schema:**
+```sql
+-- Citizen table now includes:
+citizen (
+    id SERIAL PRIMARY KEY,
+    status_id INTEGER REFERENCES citizen-status(id),
+    surname_id INTEGER REFERENCES surnames(id),
+    first_name_id INTEGER REFERENCES first-names(id),
+    gender CHAR(1) CHECK (gender IN ('M', 'F')),
+    died DATE
+)
+```
+
+This enhancement enables efficient access to citizen's current name and gender while maintaining the historical birth record information, providing both current state and historical data in a well-structured manner.
+
+### Follow-up: Citizen Changes Table Structure Update
+
+**User Request**: The user requested to remove the change_type column from citizen-changes table and make the details column a JSON document for more flexible change tracking.
+
+**Updated `voters/db/citizen-changes.sql`:**
+- **Removed**: `change_type VARCHAR(50) NOT NULL` column
+- **Changed**: `details TEXT` to `details JSONB NOT NULL`
+- **Updated**: Comments to reflect the new structure
+
+**Key Benefits:**
+- **Flexibility**: JSON structure allows for complex change descriptions without predefined types
+- **Extensibility**: New change types can be added without schema modifications
+- **Rich Data**: JSON can include multiple fields, arrays, and nested objects for detailed change tracking
+- **Queryability**: PostgreSQL JSONB provides efficient querying and indexing capabilities
+
+**Example JSON Structure:**
+```json
+{
+  "change_type": "name_change",
+  "old_values": {
+    "surname_id": 123,
+    "first_name_id": 456
+  },
+  "new_values": {
+    "surname_id": 789,
+    "first_name_id": 101
+  },
+  "reason": "marriage",
+  "authorized_by": "registry_office"
+}
+```
+
+**Database Schema:**
+```sql
+citizen-changes (
+    id SERIAL PRIMARY KEY,
+    citizen_id INTEGER NOT NULL,
+    change_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    details JSONB NOT NULL,
+    FOREIGN KEY (citizen_id) REFERENCES citizen(id)
+)
+```
+
+This change provides a more flexible and powerful system for tracking citizen changes while maintaining data integrity and query performance through PostgreSQL's JSONB capabilities.

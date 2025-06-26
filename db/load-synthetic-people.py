@@ -188,9 +188,17 @@ def main():
                 else:
                     citizen_status = 'N' if random.random() < 0.9 else 'F' 
 
+                # Get citizen-status ID for the status
+                cursor.execute("SELECT id FROM citizen-status WHERE code = %s;", (citizen_status,))
+                status_result = cursor.fetchone()
+                if not status_result:
+                    print(f"Error: Citizen status '{citizen_status}' not found in citizen-status table.", file=sys.stderr)
+                    sys.exit(1)
+                status_id = status_result[0]
+
                 cursor.execute(
-                    "INSERT INTO citizens (status, died) VALUES (%s, NULL) RETURNING id;",
-                    (citizen_status,)
+                    "INSERT INTO citizen (status_id, surname_id, first_name_id, gender) VALUES (%s, %s, %s, %s) RETURNING id;",
+                    (status_id, surname_id, first_name_id, gender)
                 )
                 citizen_id = cursor.fetchone()[0]
                 
@@ -231,7 +239,7 @@ def main():
                         died_date = dob + timedelta(days=random_death_offset)
                     
                     cursor.execute(
-                        "UPDATE citizens SET died = %s WHERE id = %s;",
+                        "UPDATE citizen SET died = %s WHERE id = %s;",
                         (died_date, citizen_id)
                     )
                     deaths_applied += 1

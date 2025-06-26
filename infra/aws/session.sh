@@ -1,0 +1,4 @@
+AWS_PROFILE=sandbox
+AWS_DEFAULT_REGION=eu-west-1
+AWS_REGION=eu-west-1
+AWS_PAGER= 

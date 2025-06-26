@@ -1,29 +1,29 @@
 #!/usr/bin/env bash
 
 # Wrapper script to run the load-places.py Python script.
-# Version: 1.3
+# Version: 1.4
 # Author: Gemini (Daemon Consulting Software Engineer)
 
 set -euo pipefail
 
 # --- Default Configuration ---
-DEFAULT_CSV_FILE="db/uk-cities.csv"
-CSV_FILE=""
+DEFAULT_ADDRESSES_FOLDER="data/addresses"
+ADDRESSES_FOLDER=""
 
 function usage() {
-    echo "usage: ${0} [--csv-file <path>] [--help] [--debug]" >&2
-    echo "This script runs the Python script to load places." >&2
-    echo "  --csv-file <path>  Path to the places CSV file (default: project_root/${DEFAULT_CSV_FILE})." >&2
-    echo "  --help             Display this help message." >&2
-    echo "  --debug            Enable debug mode (set -x)." >&2
+    echo "usage: ${0} [--addresses-folder <path>] [--help] [--debug]" >&2
+    echo "This script runs the Python script to load places from address CSV files." >&2
+    echo "  --addresses-folder <path>  Path to the folder containing address CSV files (default: project_root/${DEFAULT_ADDRESSES_FOLDER})." >&2
+    echo "  --help                     Display this help message." >&2
+    echo "  --debug                    Enable debug mode (set -x)." >&2
     exit 1
 }
 
 # --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --csv-file)
-            CSV_FILE="$2"
+        --addresses-folder)
+            ADDRESSES_FOLDER="$2"
             shift 2
             ;;
         --debug)
@@ -52,20 +52,20 @@ if [[ ! -f "${ENV_FILE}" ]]; then
 fi
 source "${ENV_FILE}"
 
-# Use default CSV if one is not provided
-if [[ -z "$CSV_FILE" ]]; then
-    CSV_FILE="${PROJECT_ROOT}/${DEFAULT_CSV_FILE}"
+# Use default addresses folder if one is not provided
+if [[ -z "$ADDRESSES_FOLDER" ]]; then
+    ADDRESSES_FOLDER="${PROJECT_ROOT}/${DEFAULT_ADDRESSES_FOLDER}"
 fi
 
-# Check if CSV file exists
-if [[ ! -f "$CSV_FILE" ]]; then
-    echo "Error: CSV file not found at ${CSV_FILE}" >&2
+# Check if addresses folder exists
+if [[ ! -d "$ADDRESSES_FOLDER" ]]; then
+    echo "Error: Addresses folder not found at ${ADDRESSES_FOLDER}" >&2
     exit 1
 fi
 
 # Set the PYTHONPATH to include the project's root directory
 export PYTHONPATH="${PROJECT_ROOT}"
 
-# Run the Python script, passing the csv-file argument
+# Run the Python script, passing the addresses-folder argument
 echo "Running load-places.py..."
-python3 "${PROJECT_ROOT}/db/load-places.py" --csv-file "$CSV_FILE" 
+python3 "${PROJECT_ROOT}/db/load-places.py" --addresses-folder "$ADDRESSES_FOLDER" 
