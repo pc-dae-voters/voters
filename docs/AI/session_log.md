@@ -512,3 +512,14 @@ The application provides a complete REST API for managing the voter data infrast
 
 **Files Modified:**
 - [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added an `scp` command to upload the hotfix for the postcode loading script.
+
+---
+
+## Session 37: 2025-10-11 - Final Fix for K8s Version Precedence
+
+**User Request:** (Fixing persistent Kubernetes version error)
+
+**Response:** After multiple failures, the true root cause of the persistent Kubernetes version error was identified as a Terraform variable precedence issue. The `kubernetes_version` variable in the main `infra/azure/variables.tf` file had a stale default value (`1.28.5`) that was overriding the corrected value in the AKS module. This root-level default was updated to the correct version (`1.31.11`).
+
+**Files Modified:**
+- [`./infra/azure/variables.tf`](../../infra/azure/variables.tf) - Corrected the root-level default for the Kubernetes version.
