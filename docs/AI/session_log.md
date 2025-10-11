@@ -4,10 +4,10 @@
 
 **User Request:** Improve the AWS credential handling in the setup script by automatically sourcing a session file before checking credentials.
 
-**Response:** Enhanced the `voters/bin/session.sh` script to automatically source the session file before checking AWS credentials, improving the user experience and reducing manual steps.
+**Response:** Enhanced the `./bin/session.sh` script to automatically source the session file before checking AWS credentials, improving the user experience and reducing manual steps.
 
 **Files Modified:**
-- [`voters/bin/session.sh`](../../../bin/session.sh) - Added automatic session file sourcing
+- [`./bin/session.sh`](../../bin/session.sh) - Added automatic session file sourcing
 
 ---
 
@@ -18,9 +18,9 @@
 **Response:** Rewritten the places loader script to process multiple CSV files from a folder, extract place names from the last element of the Address field, and associate all places with the United Kingdom country ID.
 
 **Files Modified:**
-- [`voters/db/load-places.py`](../../../db/load-places.py) - Complete rewrite for folder processing
-- [`voters/bin/run-load-places.sh`](../../../bin/run-load-places.sh) - Updated to use new interface
-- [`voters/bin/load-data.sh`](../../../bin/load-data.sh) - Updated to use new interface
+- [`./db/load-places.py`](../../db/load-places.py) - Complete rewrite for folder processing
+- [`./bin/run-load-places.sh`](../../bin/run-load-places.sh) - Updated to use new interface
+- [`./bin/load-data.sh`](../../bin/load-data.sh) - Updated to use new interface
 
 ---
 
@@ -31,9 +31,9 @@
 **Response:** Enhanced the citizen table schema with surname, first name, and gender fields, and updated the synthetic people loader to populate these fields, enabling easy access to current citizen names and genders.
 
 **Files Modified:**
-- [`voters/db/citizen.sql`](../../../db/citizen.sql) - Added surname_id, first_name_id, gender, and died fields
-- [`voters/db/load-synthetic-people.py`](../../../db/load-synthetic-people.py) - Updated to populate new fields
-- [`voters/bin/create-tables.sh`](../../../bin/create-tables.sh) - Updated table creation script
+- [`./db/citizen.sql`](../../db/citizen.sql) - Added surname_id, first_name_id, gender, and died fields
+- [`./db/load-synthetic-people.py`](../../db/load-synthetic-people.py) - Updated to populate new fields
+- [`./bin/create-tables.sh`](../../bin/create-tables.sh) - Updated table creation script
 
 ---
 
@@ -44,8 +44,8 @@
 **Response:** Modified the citizen-changes table schema to remove change_type and convert details to JSONB, allowing rich JSON documents to describe changes flexibly.
 
 **Files Modified:**
-- [`voters/db/citizen-changes.sql`](../../../db/citizen-changes.sql) - Removed change_type, converted details to JSONB
-- [`voters/bin/create-tables.sh`](../../../bin/create-tables.sh) - Updated table creation script
+- [`./db/citizen-changes.sql`](../../db/citizen-changes.sql) - Removed change_type, converted details to JSONB
+- [`./bin/create-tables.sh`](../../bin/create-tables.sh) - Updated table creation script
 
 ---
 
@@ -56,9 +56,9 @@
 **Response:** Added comprehensive marriage generation including marriages table creation, realistic marriage generation logic, automatic surname changes for women, and change records in JSON format.
 
 **Files Modified:**
-- [`voters/db/marriages.sql`](../../../db/marriages.sql) - New marriages table schema
-- [`voters/db/load-synthetic-people.py`](../../../db/load-synthetic-people.py) - Added marriage generation logic
-- [`voters/bin/create-tables.sh`](../../../bin/create-tables.sh) - Added marriages table creation
+- [`./db/marriages.sql`](../../db/marriages.sql) - New marriages table schema
+- [`./db/load-synthetic-people.py`](../../db/load-synthetic-people.py) - Added marriage generation logic
+- [`./bin/create-tables.sh`](../../bin/create-tables.sh) - Added marriages table creation
 
 ---
 
@@ -69,9 +69,9 @@
 **Response:** Implemented parent generation logic creating children for married couples with realistic birth timing and child count distribution, updating birth records with mother and father IDs.
 
 **Files Modified:**
-- [`voters/db/load-synthetic-people.py`](../../../db/load-synthetic-people.py) - Added parent generation logic
-- [`voters/db/births.sql`](../../../db/births.sql) - Added mother_id and father_id fields
-- [`voters/bin/create-tables.sh`](../../../bin/create-tables.sh) - Updated births table creation
+- [`./db/load-synthetic-people.py`](../../db/load-synthetic-people.py) - Added parent generation logic
+- [`./db/births.sql`](../../db/births.sql) - Added mother_id and father_id fields
+- [`./bin/create-tables.sh`](../../bin/create-tables.sh) - Updated births table creation
 
 ---
 
@@ -82,7 +82,7 @@
 **Response:** Added divorce generation logic with 30% divorce rate and realistic divorce date assignment.
 
 **Files Modified:**
-- [`voters/db/load-synthetic-people.py`](../../../db/load-synthetic-people.py) - Added divorce generation logic
+- [`./db/load-synthetic-people.py`](../../db/load-synthetic-people.py) - Added divorce generation logic
 
 ---
 
@@ -93,11 +93,11 @@
 **Response:** Removed voter-status table, updated voters table schema, created comprehensive voters loader script with realistic voter registration logic, and integrated it into the main data loading process.
 
 **Files Modified:**
-- [`voters/db/voters.sql`](../../../db/voters.sql) - Removed voter_status_id, simplified schema
-- [`voters/db/load-voters.py`](../../../db/load-voters.py) - New comprehensive voters loader
-- [`voters/bin/run-load-voters.sh`](../../../bin/run-load-voters.sh) - New bash wrapper script
-- [`voters/bin/load-data.sh`](../../../bin/load-data.sh) - Integrated voters loader
-- [`voters/bin/create-tables.sh`](../../../bin/create-tables.sh) - Removed voter-status table creation
+- [`./db/voters.sql`](../../db/voters.sql) - Removed voter_status_id, simplified schema
+- [`./db/load-voters.py`](../../db/load-voters.py) - New comprehensive voters loader
+- [`./bin/run-load-voters.sh`](../../bin/run-load-voters.sh) - New bash wrapper script
+- [`./bin/load-data.sh`](../../bin/load-data.sh) - Integrated voters loader
+- [`./bin/create-tables.sh`](../../bin/create-tables.sh) - Removed voter-status table creation
 
 ---
 
@@ -108,9 +108,9 @@
 **Response:** Created a comprehensive Spring Boot application with full CRUD operations for the voter data system, including:
 
 **Files Created:**
-- [`voters/voters-api/pom.xml`](../../../voters-api/pom.xml) - Maven module configuration
-- [`voters/voters-api/src/main/java/com/tesco/ise/voters/VotersApiApplication.java`](../../../voters-api/src/main/java/com/tesco/ise/voters/VotersApiApplication.java) - Main application class
-- `voters/voters-api/src/main/java/com/tesco/ise/voters/entity/` - Complete entity classes:
+- [`./voters-api/pom.xml`](../../voters-api/pom.xml) - Maven module configuration
+- [`./voters-api/src/main/java/com/tesco/ise/voters/VotersApiApplication.java`](../../voters-api/src/main/java/com/tesco/ise/voters/VotersApiApplication.java) - Main application class
+- `./voters-api/src/main/java/com/tesco/ise/voters/entity/` - Complete entity classes:
   - `Citizen.java` - Citizen entity with name, gender, status tracking
   - `CitizenStatus.java` - Citizen status codes
   - `FirstName.java` - First names with gender association
@@ -123,23 +123,23 @@
   - `Marriage.java` - Marriage records
   - `Birth.java` - Birth records with parent relationships
   - `CitizenChange.java` - JSON-based change tracking
-- `voters/voters-api/src/main/java/com/tesco/ise/voters/repository/` - Repository interfaces:
+- `./voters-api/src/main/java/com/tesco/ise/voters/repository/` - Repository interfaces:
   - `CitizenRepository.java` - Citizen data operations
   - `VoterRepository.java` - Voter data operations
   - `CitizenStatusRepository.java` - Status operations
   - `FirstNameRepository.java` - First name operations
   - `SurnameRepository.java` - Surname operations
-- `voters/voters-api/src/main/java/com/tesco/ise/voters/service/` - Business logic:
+- `./voters-api/src/main/java/com/tesco/ise/voters/service/` - Business logic:
   - `CitizenService.java` - Citizen business operations
   - `VoterService.java` - Voter business operations
-- `voters/voters-api/src/main/java/com/tesco/ise/voters/controller/` - REST controllers:
+- `./voters-api/src/main/java/com/tesco/ise/voters/controller/` - REST controllers:
   - `CitizenController.java` - Citizen REST endpoints
   - `VoterController.java` - Voter REST endpoints
-- [`voters/voters-api/src/main/resources/application.yml`](../../../voters-api/src/main/resources/application.yml) - Application configuration
-- [`voters/voters-api/README.md`](../../../voters-api/README.md) - Comprehensive API documentation
+- [`./voters-api/src/main/resources/application.yml`](../../voters-api/src/main/resources/application.yml) - Application configuration
+- [`./voters-api/README.md`](../../voters-api/README.md) - Comprehensive API documentation
 
 **Files Modified:**
-- [`voters/pom.xml`](../../../pom.xml) - Added voters-api module to parent project
+- [`./pom.xml`](../../pom.xml) - Added voters-api module to parent project
 
 **Features Implemented:**
 - Complete CRUD operations for citizens and voters
@@ -171,7 +171,7 @@ The application provides a complete REST API for managing the voter data infrast
 **Response:** Updated the setup-aws.sh script to include data volume creation as Step 3, ensuring the EBS volume is created before the Manager VM that depends on it. Updated all subsequent step numbers and the final summary to reflect the new sequence.
 
 **Files Modified:**
-- [`voters/bin/setup-aws.sh`](../../../bin/setup-aws.sh) - Added data volume creation step, renumbered subsequent steps, updated summary, made executable
+- [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added data volume creation step, renumbered subsequent steps, updated summary, made executable
 
 **Follow-up Fix:**
 - Fixed file permissions to make setup-aws.sh executable (chmod +x)
@@ -182,10 +182,10 @@ The application provides a complete REST API for managing the voter data infrast
 
 **User Request:** Fix the `setup-aws.sh` script failure during the Manager VM creation step.
 
-**Response:** Diagnosed and fixed an error in the `voters/infra/aws/mgr-vm/cloud-init.sh` script. The Terraform `templatefile` function was failing due to an unescaped `$` in the shell variable `$RANDOM`. The issue was resolved by escaping the dollar sign (using `$$RANDOM`), allowing Terraform to correctly process the template.
+**Response:** Diagnosed and fixed an error in the `./infra/aws/mgr-vm/cloud-init.sh` script. The Terraform `templatefile` function was failing due to an unescaped `$` in the shell variable `$RANDOM`. The issue was resolved by escaping the dollar sign (using `$$RANDOM`), allowing Terraform to correctly process the template.
 
 **Files Modified:**
-- [`voters/infra/aws/mgr-vm/cloud-init.sh`](../../../infra/aws/mgr-vm/cloud-init.sh) - Escaped the dollar sign in the `$RANDOM` variable.
+- [`./infra/aws/mgr-vm/cloud-init.sh`](../../infra/aws/mgr-vm/cloud-init.sh) - Escaped the dollar sign in the `$RANDOM` variable.
 
 ---
 
@@ -196,7 +196,7 @@ The application provides a complete REST API for managing the voter data infrast
 **Response:** Updated the `setup-aws.sh` script to include the creation of the Terraform state backend as the first step. This ensures the S3 bucket for remote state is created before any other infrastructure, making the script more robust and capable of bootstrapping a new environment from scratch. All subsequent steps were renumbered, and the final summary was updated.
 
 **Files Modified:**
-- [`voters/bin/setup-aws.sh`](../../../bin/setup-aws.sh) - Added tf-state creation as the first step and renumbered all other steps.
+- [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added tf-state creation as the first step and renumbered all other steps.
 
 ---
 
@@ -207,17 +207,17 @@ The application provides a complete REST API for managing the voter data infrast
 **Response:** Initiated the creation of the Azure infrastructure to achieve parity with the existing AWS setup. This involved creating the main orchestration script, `setup-azure.sh`, and scaffolding the entire Terraform module structure, including placeholder files for the data volume, manager VM, and AKS cluster.
 
 **Files Created:**
-- [`voters/bin/setup-azure.sh`](../../../bin/setup-azure.sh) - Main orchestration script for Azure deployment.
-- [`voters/infra/azure/data-volume/main.tf`](../../../infra/azure/data-volume/main.tf)
-- [`voters/infra/azure/data-volume/variables.tf`](../../../infra/azure/data-volume/variables.tf)
-- [`voters/infra/azure/data-volume/outputs.tf`](../../../infra/azure/data-volume/outputs.tf)
-- `voters/infra/azure/mgr-vm/main.tf` (placeholder)
-- `voters/infra/azure/mgr-vm/variables.tf` (placeholder)
-- `voters/infra/azure/mgr-vm/outputs.tf` (placeholder)
-- `voters/infra/azure/mgr-vm/cloud-init.sh` (placeholder)
-- `voters/infra/azure/aks/main.tf` (placeholder)
-- `voters/infra/azure/aks/variables.tf` (placeholder)
-- `voters/infra/azure/aks/outputs.tf` (placeholder)
+- [`./bin/setup-azure.sh`](../../bin/setup-azure.sh) - Main orchestration script for Azure deployment.
+- [`./infra/azure/data-volume/main.tf`](../../infra/azure/data-volume/main.tf)
+- [`./infra/azure/data-volume/variables.tf`](../../infra/azure/data-volume/variables.tf)
+- [`./infra/azure/data-volume/outputs.tf`](../../infra/azure/data-volume/outputs.tf)
+- `./infra/azure/mgr-vm/main.tf` (placeholder)
+- `./infra/azure/mgr-vm/variables.tf` (placeholder)
+- `./infra/azure/mgr-vm/outputs.tf` (placeholder)
+- `./infra/azure/mgr-vm/cloud-init.sh` (placeholder)
+- `./infra/azure/aks/main.tf` (placeholder)
+- `./infra/azure/aks/variables.tf` (placeholder)
+- `./infra/azure/aks/outputs.tf` (placeholder)
 
 ---
 
@@ -228,10 +228,10 @@ The application provides a complete REST API for managing the voter data infrast
 **Response:** Fully implemented the Azure Manager VM Terraform module. This included defining all necessary variables, creating the VM and its associated network resources (public IP, NIC), attaching the data disk, and developing a comprehensive cloud-init script for automated setup on an Ubuntu base.
 
 **Files Modified:**
-- [`voters/infra/azure/mgr-vm/main.tf`](../../../infra/azure/mgr-vm/main.tf) - Implemented all VM resources.
-- [`voters/infra/azure/mgr-vm/variables.tf`](../../../infra/azure/mgr-vm/variables.tf) - Defined all required input variables.
-- [`voters/infra/azure/mgr-vm/outputs.tf`](../../../infra/azure/mgr-vm/outputs.tf) - Exposed the VM's public IP and SSH key.
-- [`voters/infra/azure/mgr-vm/cloud-init.sh`](../../../infra/azure/mgr-vm/cloud-init.sh) - Created a detailed setup script for software installation and environment configuration.
+- [`./infra/azure/mgr-vm/main.tf`](../../infra/azure/mgr-vm/main.tf) - Implemented all VM resources.
+- [`./infra/azure/mgr-vm/variables.tf`](../../infra/azure/mgr-vm/variables.tf) - Defined all required input variables.
+- [`./infra/azure/mgr-vm/outputs.tf`](../../infra/azure/mgr-vm/outputs.tf) - Exposed the VM's public IP and SSH key.
+- [`./infra/azure/mgr-vm/cloud-init.sh`](../../infra/azure/mgr-vm/cloud-init.sh) - Created a detailed setup script for software installation and environment configuration.
 
 ---
 
@@ -242,9 +242,9 @@ The application provides a complete REST API for managing the voter data infrast
 **Response:** Fully implemented the Azure Kubernetes Service (AKS) Terraform module. This involved defining the `azurerm_kubernetes_cluster` resource, configuring its node pool, network profile for VNet integration, and setting up outputs for the cluster name and raw kubeconfig.
 
 **Files Modified:**
-- [`voters/infra/azure/aks/main.tf`](../../../infra/azure/aks/main.tf) - Implemented the AKS cluster resource.
-- [`voters/infra/azure/aks/variables.tf`](../../../infra/azure/aks/variables.tf) - Defined all required input variables.
-- [`voters/infra/azure/aks/outputs.tf`](../../../infra/azure/aks/outputs.tf) - Exposed the cluster name and kubeconfig.
+- [`./infra/azure/aks/main.tf`](../../infra/azure/aks/main.tf) - Implemented the AKS cluster resource.
+- [`./infra/azure/aks/variables.tf`](../../infra/azure/aks/variables.tf) - Defined all required input variables.
+- [`./infra/azure/aks/outputs.tf`](../../infra/azure/aks/outputs.tf) - Exposed the cluster name and kubeconfig.
 
 ---
 
@@ -255,10 +255,10 @@ The application provides a complete REST API for managing the voter data infrast
 **Response:** Fully integrated the newly created `data-volume`, `mgr-vm`, and `aks` modules into the root Azure Terraform configuration. This involved updating the main `variables.tf`, `main.tf`, and `outputs.tf` to orchestrate the deployment of all Azure resources, enabling the `setup-azure.sh` script to be fully functional.
 
 **Files Modified:**
-- [`voters/infra/azure/modules/database/outputs.tf`](../../../infra/azure/modules/database/outputs.tf) - Added admin password to outputs.
-- [`voters/infra/azure/variables.tf`](../../../infra/azure/variables.tf) - Added variables for new modules.
-- [`voters/infra/azure/main.tf`](../../../infra/azure/main.tf) - Added module blocks to orchestrate the full deployment.
-- [`voters/infra/azure/outputs.tf`](../../../infra/azure/outputs.tf) - Added outputs for VM and AKS resources.
+- [`./infra/azure/modules/database/outputs.tf`](../../infra/azure/modules/database/outputs.tf) - Added admin password to outputs.
+- [`./infra/azure/variables.tf`](../../infra/azure/variables.tf) - Added variables for new modules.
+- [`./infra/azure/main.tf`](../../infra/azure/main.tf) - Added module blocks to orchestrate the full deployment.
+- [`./infra/azure/outputs.tf`](../../infra/azure/outputs.tf) - Added outputs for VM and AKS resources.
 
 ---
 
@@ -269,11 +269,11 @@ The application provides a complete REST API for managing the voter data infrast
 **Response:** Created the Azure-specific utility scripts required for interacting with the manager VM. This included `mgr-ssh-azure.sh` to provide easy SSH access and `upload-data-azure.sh` to handle uploading data files using rsync. The main `setup-azure.sh` script was updated to use these new scripts.
 
 **Files Created:**
-- [`voters/bin/mgr-ssh-azure.sh`](../../../bin/mgr-ssh-azure.sh)
-- [`voters/bin/upload-data-azure.sh`](../../../bin/upload-data-azure.sh)
+- [`./bin/mgr-ssh-azure.sh`](../../bin/mgr-ssh-azure.sh)
+- [`./bin/upload-data-azure.sh`](../../bin/upload-data-azure.sh)
 
 **Files Modified:**
-- [`voters/bin/setup-azure.sh`](../../../bin/setup-azure.sh) - Replaced placeholder comments with calls to the new scripts.
+- [`./bin/setup-azure.sh`](../../bin/setup-azure.sh) - Replaced placeholder comments with calls to the new scripts.
 
 ---
 
@@ -284,5 +284,5 @@ The application provides a complete REST API for managing the voter data infrast
 **Response:** Created comprehensive teardown scripts for both AWS and Azure to automate the complete destruction of all created infrastructure. Both scripts destroy resources in the correct reverse dependency order and include a manual confirmation step to prevent accidental deletion.
 
 **Files Created:**
-- [`voters/bin/teardown-aws.sh`](../../../bin/teardown-aws.sh)
-- [`voters/bin/teardown-azure.sh`](../../../bin/teardown-azure.sh)
+- [`./bin/teardown-aws.sh`](../../bin/teardown-aws.sh)
+- [`./bin/teardown-azure.sh`](../../bin/teardown-azure.sh)
