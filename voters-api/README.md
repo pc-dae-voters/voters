@@ -36,6 +36,16 @@ A Spring Boot REST API for managing voter data, citizens, marriages, and related
 2. Run the database setup scripts in the `../db/` directory
 3. Load the data using the scripts in the `../bin/` directory
 
+#### Using Docker
+For a consistent development environment, you can use the provided Docker Compose file to run a PostgreSQL database.
+
+```bash
+# From the voters-api directory
+docker-compose up -d
+```
+
+This will start a PostgreSQL container with the correct database and credentials. You can then run the setup and data loading scripts against this container.
+
 ### Configuration
 
 The application uses the following environment variables:
@@ -135,6 +145,13 @@ The API will be available at `http://localhost:8080`
   "registrationDate": "2020-01-15"
 }
 ```
+
+## API Documentation
+
+With the inclusion of `springdoc-openapi`, the API documentation is automatically generated.
+
+- **Swagger UI**: `http://localhost:8080/swagger-ui.html`
+- **OpenAPI 3.0 Spec (JSON)**: `http://localhost:8080/v3/api-docs`
 
 ## Pagination
 
