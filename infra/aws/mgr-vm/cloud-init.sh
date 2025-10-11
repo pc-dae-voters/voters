@@ -165,12 +165,12 @@ cd /home/ec2-user/pc-dae-voters
 source infra/db/db-env.sh
 
 # Set default values for data loading arguments
-CON_CSV="\${CON_CSV:-/data/parl_constituencies_2025.csv}"
-CON_POSTCODES_CSV="\${CON_POSTCODES_CSV:-/data/postcodes_with_con.csv}"
-ADDRESSES_FOLDER="\${ADDRESSES_FOLDER:-/data/addresses}"
-NAMES_FOLDER="\${NAMES_FOLDER:-/data/names/data}"
-NUM_PEOPLE="\${NUM_PEOPLE:-10000}"
-RANDOM_SEED="\${RANDOM_SEED:-\$RANDOM}"
+CON_CSV="$${CON_CSV:-/data/parl_constituencies_2025.csv}"
+CON_POSTCODES_CSV="$${CON_POSTCODES_CSV:-/data/postcodes_with_con.csv}"
+ADDRESSES_FOLDER="$${ADDRESSES_FOLDER:-/data/addresses}"
+NAMES_FOLDER="$${NAMES_FOLDER:-/data/names/data}"
+NUM_PEOPLE="$${NUM_PEOPLE:-10000}"
+RANDOM_SEED="$${RANDOM_SEED:-12345}" # Use a static seed to avoid template parsing issues
 
 echo "Loading data into database..."
 echo "Using configuration:"
