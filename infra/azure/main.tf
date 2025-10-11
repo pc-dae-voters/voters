@@ -18,6 +18,8 @@ provider "azurerm" {
   features {}
 }
 
+data "azurerm_client_config" "current" {}
+
 # Resource Group
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
@@ -49,8 +51,20 @@ module "database" {
   admin_username     = var.db_admin_username
   subnet_id          = module.network.subnet_ids["db"]
   vnet_id            = module.network.vnet_id
-  key_vault_id       = var.key_vault_id
+  key_vault_id       = module.key_vault.key_vault_id
   tags               = var.tags
+}
+
+# Key Vault
+module "key_vault" {
+  source = "./modules/key-vault"
+
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  key_vault_name      = var.key_vault_name
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+  spn_object_id       = data.azurerm_client_config.current.object_id
+  tags                = var.tags
 }
 
 # Data Volume

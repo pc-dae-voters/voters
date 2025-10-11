@@ -1,3 +1,16 @@
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
+  }
+}
+
 # --- Network ---
 resource "azurerm_public_ip" "manager" {
   name                = "${var.vm_name}-pip"
@@ -50,7 +63,14 @@ resource "azurerm_linux_virtual_machine" "manager" {
     version   = "latest"
   }
 
-  custom_data = base64encode(data.template_file.cloud_init.rendered)
+  custom_data = base64encode(templatefile("${path.module}/cloud-init.sh", {
+    db_host           = var.db_host
+    db_name           = var.db_name
+    db_username       = var.db_username
+    db_password       = var.db_password
+    version           = var.cloud_init_version
+    terraform_version = var.terraform_version
+  }))
 
   tags = var.tags
 }
@@ -70,14 +90,5 @@ resource "tls_private_key" "manager_key" {
 }
 
 # --- Cloud-init ---
-data "template_file" "cloud_init" {
-  template = file("${path.module}/cloud-init.sh")
-
-  vars = {
-    db_host     = var.db_host
-    db_name     = var.db_name
-    db_username = var.db_username
-    db_password = var.db_password
-    version     = var.cloud_init_version
-  }
-}
+# The data "template_file" resource has been replaced by the built-in
+# templatefile() function directly in the azurerm_linux_virtual_machine resource.

@@ -115,6 +115,12 @@ log_success "Using Azure credentials for SPN: $AZURE_CLIENT_ID on Subscription: 
 
 # --- Main Setup Process ---
 
+# Clean up previous Terraform state to avoid caching issues
+log_step "Cleaning up local Terraform cache"
+find ./infra/azure -type d -name ".terraform" -exec rm -rf {} +
+find ./infra/azure -type f -name ".terraform.lock.hcl" -delete
+log_success "Terraform cache cleaned"
+
 # Step 1: Create Terraform State Backend
 log_step "Step 1: Creating Terraform State Backend"
 echo "Creating Azure Storage Account for Terraform state..."

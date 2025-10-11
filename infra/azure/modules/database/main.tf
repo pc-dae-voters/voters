@@ -9,6 +9,7 @@ resource "azurerm_postgresql_flexible_server" "main" {
   administrator_password = random_password.db_password.result
   zone                   = "1"
   storage_mb             = 32768
+  public_network_access_enabled = false
 
   sku_name = "B_Standard_B1ms"
 
@@ -16,7 +17,7 @@ resource "azurerm_postgresql_flexible_server" "main" {
 }
 
 resource "azurerm_private_dns_zone" "main" {
-  name                = "${var.server_name}.postgres.database.azure.com"
+  name                = "voters-private.postgres.database.azure.com"
   resource_group_name = var.resource_group_name
   tags                = var.tags
 }

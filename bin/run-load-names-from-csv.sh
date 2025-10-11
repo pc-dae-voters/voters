@@ -1,71 +1,20 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# Wrapper script to run the load-names-from-csv.py Python script.
-# Version: 1.3
-# Author: Gemini (Daemon Consulting Software Engineer)
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
-set -euo pipefail
+# Source the database environment variables
+DB_ENV_FILE="$SCRIPT_DIR/../infra/db/db-env.sh"
 
-# --- Default Configuration ---
-DEFAULT_INPUT_FOLDER="data/names/data"
-INPUT_FOLDER=""
-
-function usage() {
-    echo "usage: ${0} [--input-folder <path>] [--help] [--debug]" >&2
-    echo "This script runs the Python script to load names from a folder of CSVs." >&2
-    echo "  --input-folder <path>  Path to the folder of name CSVs (default: project_root/${DEFAULT_INPUT_FOLDER})." >&2
-    echo "  --help                 Display this help message." >&2
-    echo "  --debug                Enable debug mode (set -x)." >&2
-    exit 1
-}
-
-# --- Argument Parsing ---
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --input-folder)
-            INPUT_FOLDER="$2"
-            shift 2
-            ;;
-        --debug)
-            set -x
-            shift
-            ;;
-        --help)
-            usage
-            ;;
-        *)
-            echo "Unknown argument: $1" >&2
-            usage
-            ;;
-    esac
-done
-
-# --- Main Logic ---
-# Determine the project root using git and source the DB environment
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
-ENV_FILE="${PROJECT_ROOT}/infra/db/db-env.sh"
-
-if [[ ! -f "${ENV_FILE}" ]]; then
-    echo "Error: Database environment file not found at ${ENV_FILE}" >&2
-    echo "Please run 'do-terraform.sh db apply' to generate it." >&2
-    exit 1
-fi
-source "${ENV_FILE}"
-
-# Use default folder if one is not provided
-if [[ -z "$INPUT_FOLDER" ]]; then
-    INPUT_FOLDER="${PROJECT_ROOT}/${DEFAULT_INPUT_FOLDER}"
+if [[ -f "$DB_ENV_FILE" ]]; then
+    source "$DB_ENV_FILE"
+else
+    # Use default local values if not set
+    export PGHOST="${PGHOST:-localhost}"
+    export PGPORT="${PGPORT:-5432}"
+    export PGDATABASE="${PGDATABASE:-voters}"
+    export PGUSER="${PGUSER:-postgres}"
+    export PGPASSWORD="${PGPASSWORD:-password}"
 fi
 
-# Check if folder exists
-if [[ ! -d "$INPUT_FOLDER" ]]; then
-    echo "Error: Input folder not found at ${INPUT_FOLDER}" >&2
-    exit 1
-fi
-
-# Set the PYTHONPATH to include the project's root directory
-export PYTHONPATH="${PROJECT_ROOT}"
-
-# Run the Python script, passing the names-data-folder argument
-echo "Running load-names-from-csv.py..."
-python3 "${PROJECT_ROOT}/db/load-names-from-csv.py" --names-data-folder "$INPUT_FOLDER" 
+echo "Loading names from CSV..."
+python3 "$SCRIPT_DIR/../db/load-names-from-csv.py" 

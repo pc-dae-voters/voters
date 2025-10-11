@@ -61,11 +61,6 @@ variable "db_admin_username" {
   default     = "voters_admin"
 }
 
-variable "key_vault_id" {
-  description = "ID of the Key Vault to store database credentials"
-  type        = string
-}
-
 # --- Data Volume ---
 variable "disk_name" {
   description = "Name of the managed disk"
@@ -96,6 +91,13 @@ variable "admin_username" {
   description = "Admin username for the virtual machine"
   type        = string
   default     = "azureuser"
+}
+
+# --- Key Vault ---
+variable "key_vault_name" {
+  description = "Name of the Key Vault"
+  type        = string
+  default     = "voters-key-vault-unique" # Needs to be globally unique
 }
 
 # --- AKS ---

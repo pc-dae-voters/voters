@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS marriages CASCADE;
+
+-- Table Definition
 CREATE TABLE IF NOT EXISTS marriages (
     id SERIAL PRIMARY KEY,
     partner1_id INTEGER NOT NULL,

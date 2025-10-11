@@ -275,6 +275,9 @@ The application provides a complete REST API for managing the voter data infrast
 **Files Modified:**
 - [`./bin/setup-azure.sh`](../../bin/setup-azure.sh) - Replaced placeholder comments with calls to the new scripts.
 
+**Follow-up Fix:**
+- Fixed file permissions to make setup-azure.sh executable (chmod +x)
+
 ---
 
 ## Session 18: 2025-10-11 - Infrastructure Teardown Scripts
@@ -286,3 +289,226 @@ The application provides a complete REST API for managing the voter data infrast
 **Files Created:**
 - [`./bin/teardown-aws.sh`](../../bin/teardown-aws.sh)
 - [`./bin/teardown-azure.sh`](../../bin/teardown-azure.sh)
+
+---
+
+## Session 19: 2025-10-11 - Truncate Name Data Files
+
+**User Request:** Loading names data is taking too long, please edit the files in the data folder removing all but the 1st 1000 lines from each file except the GB/csv file
+
+**Response:** To improve the performance of data loading for development, a script was run to truncate all CSV files in the `data/names/data/` directory to the first 1000 lines. The `GB.csv` file was explicitly excluded from this operation to preserve its full contents.
+
+**Files Modified:**
+- All `.csv` files in `data/names/data/` except `GB.csv`.
+
+---
+
+## Session 20: 2025-10-11 - Fix Azure Interactive Terraform Prompt
+
+**User Request:** this should not prompt for input
+
+**Response:** Fixed an issue where the `setup-azure.sh` script would prompt for interactive input during `terraform init`. The `intelligent-init.sh` script was rewritten to automatically detect when it's running for an Azure module, fetch the backend configuration from the `tf-state` module's outputs, and pass it to the `terraform init` command, making the process non-interactive as intended.
+
+**Files Modified:**
+- [`./bin/intelligent-init.sh`](../../bin/intelligent-init.sh) - Rewritten to support non-interactive Azure backend initialization.
+
+---
+
+## Session 21: 2025-10-11 - Fix Deprecated Terraform Template Provider
+
+**User Request:** (Fixing the `Incompatible provider version` error)
+
+**Response:** Fixed a Terraform error caused by an incompatible provider version for the `hashicorp/template` provider on the `darwin_arm64` platform. The deprecated `data "template_file"` resource was replaced with the modern, built-in `templatefile()` function, removing the dependency on the outdated provider.
+
+**Files Modified:**
+- [`./infra/azure/mgr-vm/main.tf`](../../infra/azure/mgr-vm/main.tf) - Replaced `data "template_file"` with the `templatefile()` function.
+
+---
+
+## Session 22: 2025-10-11 - Add Azure Key Vault and Fix Prompt
+
+**User Request:** (Fixing the `var.key_vault_id` interactive prompt)
+
+**Response:** Fixed an issue where the `setup-azure.sh` script prompted for a Key Vault ID. A new, dedicated Terraform module was created for the Azure Key Vault, and the main Terraform configuration was updated to create the vault and pass its ID to the database module automatically, removing the interactive prompt.
+
+**Files Created:**
+- [`./infra/azure/modules/key-vault/main.tf`](../../infra/azure/modules/key-vault/main.tf)
+- [`./infra/azure/modules/key-vault/variables.tf`](../../infra/azure/modules/key-vault/variables.tf)
+- [`./infra/azure/modules/key-vault/outputs.tf`](../../infra/azure/modules/key-vault/outputs.tf)
+
+**Files Modified:**
+- [`./infra/azure/variables.tf`](../../infra/azure/variables.tf) - Added `key_vault_name` variable.
+- [`./infra/azure/main.tf`](../../infra/azure/main.tf) - Integrated the new Key Vault module.
+
+**Follow-up Fix:**
+- Removed the redundant `key_vault_id` variable from the root `variables.tf` to prevent interactive prompts.
+
+---
+
+## Session 23: 2025-10-11 - Fix Final Terraform Template Error
+
+**User Request:** (Fixing the final `templatefile` interpolation error)
+
+**Response:** Fixed the final Terraform `templatefile` error in the Azure `cloud-init.sh` script. The remaining shell variables using default value syntax (`${VAR:-default}`) inside the `load-data.sh` heredoc were properly escaped with `$${...}` to prevent template parsing errors.
+
+**Files Modified:**
+- [`./infra/azure/mgr-vm/cloud-init.sh`](../../infra/azure/mgr-vm/cloud-init.sh) - Applied correct escaping to remaining variables.
+
+---
+
+## Session 24: 2025-10-11 - Fix Missing Terraform Version Variable
+
+**User Request:** (Fixing the `Invalid value for "vars" parameter` error)
+
+**Response:** Fixed an error where the `templatefile` function was failing due to a missing `TERRAFORM_VERSION` variable. A new `terraform_version` variable was added to the `mgr-vm` module and passed to the `cloud-init.sh` script to make the Terraform installation version configurable.
+
+**Files Modified:**
+- [`./infra/azure/mgr-vm/variables.tf`](../../infra/azure/mgr-vm/variables.tf) - Added `terraform_version` variable.
+- [`./infra/azure/mgr-vm/main.tf`](../../infra/azure/mgr-vm/main.tf) - Passed new variable to the `templatefile` function.
+- [`./infra/azure/mgr-vm/cloud-init.sh`](../../infra/azure/mgr-vm/cloud-init.sh) - Updated to use the new variable.
+
+**Follow-up Fix:**
+- Corrected a case-sensitivity mismatch between the variable passed from Terraform and the one used in the `cloud-init.sh` script.
+
+---
+
+## Session 25: 2025-10-11 - Refactor Terraform Installation in Cloud-Init
+
+**User Request:** (Fixing the `vars map does not contain key "TERRAFORM_ZIP"` error)
+
+**Response:** Fixed a final error in the `cloud-init.sh` script where intermediate shell variables for the Terraform download were causing issues. The script was refactored to construct the download URL and ZIP filename directly from the `terraform_version` variable, making the installation process more robust.
+
+**Files Modified:**
+- [`./infra/azure/mgr-vm/cloud-init.sh`](../../infra/azure/mgr-vm/cloud-init.sh) - Refactored Terraform installation logic.
+
+---
+
+## Session 26: 2025-10-11 - Fix Azure Deployment Errors
+
+**User Request:** (Fixing multiple Azure deployment errors)
+
+**Response:** Fixed three simultaneous deployment errors in the Azure Terraform configuration. The Kubernetes version was updated to a compatible non-LTS version, the PostgreSQL server was configured to disable public network access, and the Key Vault was updated to automatically grant secret management permissions to the Service Principal.
+
+**Files Modified:**
+- [`./infra/azure/aks/variables.tf`](../../infra/azure/aks/variables.tf) - Updated Kubernetes version.
+- [`./infra/azure/modules/database/main.tf`](../../infra/azure/modules/database/main.tf) - Disabled public network access.
+- [`./infra/azure/modules/key-vault/variables.tf`](../../infra/azure/modules/key-vault/variables.tf) - Added `spn_object_id` variable.
+- [`./infra/azure/modules/key-vault/main.tf`](../../infra/azure/modules/key-vault/main.tf) - Updated access policy to use the SPN object ID.
+- [`./infra/azure/main.tf`](../../infra/azure/main.tf) - Passed the SPN object ID to the Key Vault module.
+
+---
+
+## Session 27: 2025-10-11 - Fix Stale Plan and DNS Errors
+
+**User Request:** (Fixing Kubernetes version and DNS zone errors)
+
+**Response:** Fixed two final deployment errors in the Azure setup. A `-upgrade` flag was added to the `terraform init` command to resolve a stale plan issue that was causing an incorrect Kubernetes version to be used. The Private DNS Zone name in the database module was also corrected to a valid, non-redundant format.
+
+**Files Modified:**
+- [`./bin/intelligent-init.sh`](../../bin/intelligent-init.sh) - Added `-upgrade` flag to `terraform init`.
+- [`./infra/azure/modules/database/main.tf`](../../infra/azure/modules/database/main.tf) - Corrected the Private DNS Zone name.
+
+---
+
+## Session 28: 2025-10-11 - Force Cache Clean and Revert DNS Fix
+
+**User Request:** (Fixing persistent Kubernetes version and DNS zone errors)
+
+**Response:** To resolve a persistent Kubernetes version error, a cleanup step was added to `setup-azure.sh` to forcefully delete all local `.terraform` caches before execution. Additionally, the Private DNS Zone name in the database module was reverted to its original, correct format (`servername.suffix`) after determining the previous "fix" was based on a misleading error.
+
+**Files Modified:**
+- [`./bin/setup-azure.sh`](../../bin/setup-azure.sh) - Added a `find ... -delete` command to clear `.terraform` caches.
+- [`./infra/azure/modules/database/main.tf`](../../infra/azure/modules/database/main.tf) - Reverted the Private DNS Zone name to the correct format.
+
+---
+
+## Session 29: 2025-10-11 - Generate OpenAPI Specification
+
+**User Request:** I want to generate swagger and openapi spec for this API
+
+**Response:** Added the `springdoc-openapi-starter-webmvc-ui` dependency to the `voters-api` module to automatically generate an OpenAPI 3.0 specification and a Swagger UI. The README was updated to include links to the new documentation endpoints.
+
+**Files Modified:**
+- [`./voters-api/pom.xml`](../../voters-api/pom.xml) - Added `springdoc-openapi` dependency.
+- [`./voters-api/README.md`](../../voters-api/README.md) - Added API Documentation section with Swagger UI and OpenAPI spec links.
+
+---
+
+## Session 30: 2025-10-11 - Fix Remote Script Execution Path
+
+**User Request:** it failed
+
+**Response:** Fixed an error in the `setup-aws.sh` script where the remote execution of `load-data.sh` was failing with a "command not found" error. The script was updated to use the absolute path (`/home/ec2-user/load-data.sh`) on the manager VM, ensuring the command is located and executed correctly.
+
+**Files Modified:**
+- [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Updated the `mgr-ssh.sh` command to use the absolute path for the remote script.
+
+---
+
+## Session 31: 2025-10-11 - Fix Constituency Postcode Loader Column Name
+
+**User Request:** failed
+
+**Response:** Fixed an error in the `load-con-postcodes.py` script that was causing the data loading process to fail. The script was hardcoded to expect a `con_code` column in the CSV file, but the data contains `short_code` instead. The script was updated to use the correct column name, allowing the constituency postcode data to be loaded successfully.
+
+**Files Modified:**
+- [`./db/load-con-postcodes.py`](../../db/load-con-postcodes.py) - Changed expected column name from `con_code` to `short_code`.
+
+---
+
+## Session 32: 2025-10-11 - Fix Executable JAR Creation
+
+**User Request:** it failed to run
+
+**Response:** Fixed an error where the `voters-api` JAR file was not being created as an executable. The `spring-boot-maven-plugin` was missing the necessary `repackage` goal. The `pom.xml` was updated to include this goal, ensuring that `mvn package` produces a runnable Spring Boot fat JAR.
+
+**Files Modified:**
+- [`./voters-api/pom.xml`](../../voters-api/pom.xml) - Added `<executions>` block with `repackage` goal to `spring-boot-maven-plugin`.
+
+---
+
+## Session 33: 2025-10-11 - Definitive Fix for K8s Version and DNS Zone
+
+**User Request:** (Fixing persistent Kubernetes version and DNS zone errors)
+
+**Response:** After multiple failed attempts, the root causes of the persistent Azure deployment errors were identified. The `az aks get-versions` command was used to find a valid, non-LTS Kubernetes version (`1.31.11`) for the region. The contradictory Private DNS Zone errors were resolved by using a unique, non-conflicting zone name (`voters-private.postgres.database.azure.com`) that adheres to the Azure provider's underlying requirements.
+
+**Files Modified:**
+- [`./infra/azure/aks/variables.tf`](../../infra/azure/aks/variables.tf) - Updated Kubernetes version to a definitive, valid version.
+- [`./infra/azure/modules/database/main.tf`](../../infra/azure/modules/database/main.tf) - Set a unique and valid name for the Private DNS Zone.
+
+---
+
+## Session 34: 2025-10-11 - Add Docker Compose for Local Development
+
+**User Request:** failed
+
+**Response:** To resolve a `Connection refused` error during local development, a `docker-compose.yml` file was added to the `voters-api` directory. This allows developers to easily spin up a pre-configured PostgreSQL container, ensuring a consistent and available database for the Spring Boot application to connect to. The main README was updated with instructions on how to use it.
+
+**Files Created:**
+- [`./voters-api/docker-compose.yml`](../../voters-api/docker-compose.yml) - Docker Compose file for the PostgreSQL service.
+
+**Files Modified:**
+- [`./voters-api/README.md`](../../voters-api/README.md) - Added instructions for running the local database with Docker Compose.
+
+---
+
+## Session 35: 2025-10-11 - Guide User to Run DB Setup Scripts
+
+**User Request:** still fails
+
+**Response:** Explained that the new Docker database was empty and caused a Hibernate schema validation error (`Schema-validation: missing table [addresses]`). Provided the commands to run the `create-tables.sh` and `load-data.sh` scripts to set up the database schema and populate it with data, which should resolve the issue.
+
+**Files Modified:**
+- None
+
+---
+
+## Session 36: 2025-10-11 - Force Upload Script Fix to Remote VM
+
+**User Request:** failed again
+
+**Response:** Diagnosed that previous fixes were not being applied because the remote manager VM was cloning the project from Git, overwriting any local changes. To provide a definitive fix, a new step was added to `setup-aws.sh` to manually `scp` the corrected `load-con-postcodes.py` script to the VM after the code is cloned but before the data is loaded. This ensures the patched script is used, bypassing the stale Git version.
+
+**Files Modified:**
+- [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added an `scp` command to upload the hotfix for the postcode loading script.

@@ -72,15 +72,12 @@ apt-get install -y \
 
 # Install Terraform
 echo "Installing Terraform..."
-TERRAFORM_VERSION="1.7.0"
-TERRAFORM_ZIP="terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
-TERRAFORM_URL="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/${TERRAFORM_ZIP}"
 cd /tmp
-wget "$TERRAFORM_URL"
-unzip "$TERRAFORM_ZIP"
+wget "https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_linux_amd64.zip"
+unzip "terraform_${terraform_version}_linux_amd64.zip"
 mv terraform /usr/local/bin/
 chmod +x /usr/local/bin/terraform
-rm "$TERRAFORM_ZIP"
+rm "terraform_${terraform_version}_linux_amd64.zip"
 terraform --version
 echo "Terraform installed successfully!"
 
@@ -123,12 +120,12 @@ cat > $USER_HOME/load-data.sh << 'EOF'
 set -e
 cd $USER_HOME/pc-dae-voters
 source infra/db/db-env.sh
-CON_CSV="${CON_CSV:-/data/parl_constituencies_2025.csv}"
-CON_POSTCODES_CSV="${CON_POSTCODES_CSV:-/data/postcodes_with_con.csv}"
-ADDRESSES_FOLDER="${ADDRESSES_FOLDER:-/data/addresses}"
-NAMES_FOLDER="${NAMES_FOLDER:-/data/names/data}"
-NUM_PEOPLE="${NUM_PEOPLE:-10000}"
-RANDOM_SEED="${RANDOM_SEED:-12345}"
+CON_CSV="$${CON_CSV:-/data/parl_constituencies_2025.csv}"
+CON_POSTCODES_CSV="$${CON_POSTCODES_CSV:-/data/postcodes_with_con.csv}"
+ADDRESSES_FOLDER="$${ADDRESSES_FOLDER:-/data/addresses}"
+NAMES_FOLDER="$${NAMES_FOLDER:-/data/names/data}"
+NUM_PEOPLE="$${NUM_PEOPLE:-10000}"
+RANDOM_SEED="$${RANDOM_SEED:-12345}"
 echo "Loading data into database..."
 ./bin/load-data.sh \
   --con-csv "$CON_CSV" \

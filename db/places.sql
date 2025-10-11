@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS places CASCADE;
+
+-- Table Definition
 CREATE TABLE IF NOT EXISTS places (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,

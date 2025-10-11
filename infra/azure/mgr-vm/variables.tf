@@ -63,6 +63,12 @@ variable "cloud_init_version" {
   default     = "1.0"
 }
 
+variable "terraform_version" {
+  description = "Version of Terraform to install in the VM"
+  type        = string
+  default     = "1.7.0"
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

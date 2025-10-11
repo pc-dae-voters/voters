@@ -1,8 +1,11 @@
+DROP TABLE IF EXISTS citizen CASCADE;
+
+-- Table Definition
 CREATE TABLE IF NOT EXISTS citizen (
     id SERIAL PRIMARY KEY,
-    status_id INTEGER REFERENCES citizen-status(id),
+    status_id INTEGER REFERENCES citizen_status(id),
     surname_id INTEGER REFERENCES surnames(id),
-    first_name_id INTEGER REFERENCES first-names(id),
+    first_name_id INTEGER REFERENCES first_names(id),
     gender CHAR(1) CHECK (gender IN ('M', 'F')),
     died DATE
 );

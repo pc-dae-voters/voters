@@ -1,12 +1,15 @@
-CREATE TABLE IF NOT EXISTS citizen-changes (
+DROP TABLE IF EXISTS citizen_changes CASCADE;
+
+-- Table Definition
+CREATE TABLE IF NOT EXISTS citizen_changes (
     id SERIAL PRIMARY KEY,
-    citizen_id INTEGER NOT NULL,
-    change_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    details JSONB NOT NULL,
-    FOREIGN KEY (citizen_id) REFERENCES citizen(id)
+    citizen_id INTEGER NOT NULL REFERENCES citizen(id),
+    change_date DATE NOT NULL,
+    details JSONB
 );
 
-COMMENT ON TABLE citizen-changes IS 'Tracks changes to citizen details over time, like name changes, gender reassignment, or corrections.';
-COMMENT ON COLUMN citizen-changes.citizen_id IS 'Reference to the citizen this change applies to.';
-COMMENT ON COLUMN citizen-changes.change_date IS 'The date this change became effective.';
-COMMENT ON COLUMN citizen-changes.details IS 'JSON document describing the change details.'; 
+-- Add comments to the table and columns
+COMMENT ON TABLE citizen_changes IS 'Tracks changes to citizen records.';
+COMMENT ON COLUMN citizen_changes.citizen_id IS 'Reference to the citizen who was changed.';
+COMMENT ON COLUMN citizen_changes.change_date IS 'The date the change occurred.';
+COMMENT ON COLUMN citizen_changes.details IS 'JSON document describing the change.'; 

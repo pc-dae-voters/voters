@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS surnames CASCADE;
+
+-- Table Definition
 CREATE TABLE IF NOT EXISTS surnames (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL

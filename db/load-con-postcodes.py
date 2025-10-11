@@ -25,7 +25,7 @@ def get_db_connection():
 def load_data_from_csv(conn, table_name, csv_file_path):
     """Loads data from a CSV file into the con-postcodes table."""
     csv_postcode_col = 'postcode' 
-    csv_con_code_col = 'con_code'
+    csv_con_code_col = 'short_code'
     insert_sql = f"INSERT INTO {table_name} (postcode, con_code) VALUES (%s, %s) ON CONFLICT (postcode) DO UPDATE SET con_code = EXCLUDED.con_code;"
     
     successful_ops_count = 0

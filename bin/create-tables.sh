@@ -108,15 +108,23 @@ fi
 
 # Determine the project root using git
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-ENV_FILE="${PROJECT_ROOT}/infra/db/db-env.sh"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+DB_DIR="$SCRIPT_DIR/../db"
 
-if [[ ! -f "${ENV_FILE}" ]]; then
-    echo "Error: Database environment file not found at ${ENV_FILE}" >&2
-    echo "Please run 'do-terraform.sh db apply' to generate it." >&2
-    exit 1
+# Source the database environment variables
+DB_ENV_FILE="$SCRIPT_DIR/../infra/db/db-env.sh"
+
+if [[ -f "$DB_ENV_FILE" ]]; then
+    echo "Loading database environment file..."
+    source "$DB_ENV_FILE"
+else
+    echo "Warning: Database environment file not found. Using default local values."
+    export PGHOST="${PGHOST:-localhost}"
+    export PGPORT="${PGPORT:-5432}"
+    export PGDATABASE="${PGDATABASE:-voters}"
+    export PGUSER="${PGUSER:-postgres}"
+    export PGPASSWORD="${PGPASSWORD:-password}"
 fi
-
-source "${ENV_FILE}"
 
 echo "Successfully fetched connection details."
 echo "Host: ${PGHOST}"

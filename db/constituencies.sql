@@ -1,6 +1,9 @@
+DROP TABLE IF EXISTS constituencies CASCADE;
+
+-- Table Definition
 CREATE TABLE IF NOT EXISTS constituencies (
-    code CHAR(15) PRIMARY KEY,
-    name VARCHAR(255),
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
     tla CHAR(3),
     nation VARCHAR(255),
     region VARCHAR(255),

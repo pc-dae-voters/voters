@@ -1,148 +1,59 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# Master script to run all data loading shell scripts in the correct order.
-# Version: 1.5
-# Author: Gemini (Daemon Consulting Software Engineer)
+# This script orchestrates the loading of all data into the database.
 
-set -euo pipefail
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+VENV_DIR="$SCRIPT_DIR/../.venv"
 
-# --- Default Configuration ---
-CON_CSV=""
-CON_POSTCODES_CSV=""
-ADDRESSES_FOLDER=""
-NAMES_FOLDER=""
-NUM_PEOPLE=1000
-RANDOM_SEED=""
+# Source the database environment variables
+DB_ENV_FILE="$SCRIPT_DIR/../infra/db/db-env.sh"
 
-function usage() {
-    echo "usage: ${0} [options]" >&2
-    echo "This script runs all the data loading scripts in the correct sequence." >&2
-    echo
-    echo "Options:" >&2
-    echo "  --con-csv <path>           Path to constituencies CSV file" >&2
-    echo "  --con-postcodes-csv <path> Path to constituency postcodes CSV file" >&2
-    echo "  --addresses-folder <path>  Path to folder containing address CSVs" >&2
-    echo "  --names-folder <path>      Path to folder containing name CSVs" >&2
-    echo "  --num-people <n>           Number of synthetic people to generate (default: 1000)" >&2
-    echo "  --random-seed <n>          Random seed for synthetic people generation" >&2
-    echo "  --debug                    Enable debug mode (set -x)" >&2
-    echo "  --help                     Display this help message" >&2
-    exit 1
-}
-
-# --- Argument Parsing ---
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --con-csv)
-            CON_CSV="$2"
-            shift 2
-            ;;
-        --con-postcodes-csv)
-            CON_POSTCODES_CSV="$2"
-            shift 2
-            ;;
-        --addresses-folder)
-            ADDRESSES_FOLDER="$2"
-            shift 2
-            ;;
-        --names-folder)
-            NAMES_FOLDER="$2"
-            shift 2
-            ;;
-        --num-people)
-            NUM_PEOPLE="$2"
-            shift 2
-            ;;
-        --random-seed)
-            RANDOM_SEED="$2"
-            shift 2
-            ;;
-        --debug)
-            set -x
-            shift
-            ;;
-        --help)
-            usage
-            ;;
-        *)
-            echo "Unknown argument: $1" >&2
-            usage
-            ;;
-    esac
-done
-
-# Get the directory where the script is located.
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-PROJECT_ROOT="$(git rev-parse --show-toplevel)"
-
-# Check if virtual environment exists, if not create it
-VENV_DIR="${PROJECT_ROOT}/.venv"
-if [[ ! -d "${VENV_DIR}" ]]; then
-    echo "Virtual environment not found. Creating it..."
-    "${SCRIPT_DIR}/setup-venv.sh"
+if [[ -f "$DB_ENV_FILE" ]]; then
+    source "$DB_ENV_FILE"
+else
+    echo "Warning: Database environment file not found. Using default local values."
+    export PGHOST="${PGHOST:-localhost}"
+    export PGPORT="${PGPORT:-5432}"
+    export PGDATABASE="${PGDATABASE:-voters}"
+    export PGUSER="${PGUSER:-postgres}"
+    export PGPASSWORD="${PGPASSWORD:-password}"
 fi
 
-# Activate virtual environment
-echo "Activating virtual environment..."
-source "${VENV_DIR}/bin/activate"
+# Recreate virtual environment to ensure it's valid
+echo "Recreating Python virtual environment..."
+rm -rf "${VENV_DIR}"
+python3 -m venv "${VENV_DIR}"
 
-function run_loader() {
-    local script_name="$1"
-    shift
-    echo "--- Running ${script_name} ---"
-    if ! "${SCRIPT_DIR}/${script_name}" "$@"; then
-        echo "Error: ${script_name} failed. Aborting." >&2
+# Function to activate virtual environment
+activate_venv() {
+    echo "Activating virtual environment..."
+    source "${VENV_DIR}/bin/activate"
+}
+
+activate_venv
+echo "Installing dependencies..."
+pip3 install -r "$SCRIPT_DIR/../db/requirements.txt"
+
+function run_python_loader() {
+    local loader_script=$1
+    echo "--- Running $loader_script ---"
+    if ! python3 "$SCRIPT_DIR/../db/$loader_script"; then
+        echo "Error: $loader_script failed. Aborting." >&2
         exit 1
     fi
-    echo "--- Finished ${script_name} ---"
-    echo
 }
 
 echo "Starting data loading process..."
 
-# Run each loader with its specific arguments
-if [[ -n "$CON_CSV" ]]; then
-    run_loader "run-load-con.sh" --csv-file "$CON_CSV"
-else
-    run_loader "run-load-con.sh"
-fi
+run_python_loader "load-constituencies.py"
+run_python_loader "load-con-postcodes.py"
+run_python_loader "load-names-from-csv.py"
+run_python_loader "get-uk-places.py"
+run_python_loader "load-places.py"
+run_python_loader "load-addresses.py"
+run_python_loader "load-address-places.py"
+run_python_loader "load-synthetic-people.py"
+run_python_loader "load-voters.py"
 
-if [[ -n "$CON_POSTCODES_CSV" ]]; then
-    run_loader "run-load-con-postcodes.sh" --csv-file "$CON_POSTCODES_CSV"
-else
-    run_loader "run-load-con-postcodes.sh"
-fi
-
-# Places loader now uses addresses folder to extract place names
-if [[ -n "$ADDRESSES_FOLDER" ]]; then
-    run_loader "run-load-places.sh" --addresses-folder "$ADDRESSES_FOLDER"
-else
-    run_loader "run-load-places.sh"
-fi
-
-if [[ -n "$ADDRESSES_FOLDER" ]]; then
-    run_loader "run-load-addresses.sh" --input-folder "$ADDRESSES_FOLDER"
-else
-    run_loader "run-load-addresses.sh"
-fi
-
-if [[ -n "$NAMES_FOLDER" ]]; then
-    run_loader "run-load-names-from-csv.sh" --input-folder "$NAMES_FOLDER"
-else
-    run_loader "run-load-names-from-csv.sh"
-fi
-
-# For synthetic people, we always pass num-people and random-seed if provided
-SYNTHETIC_ARGS="--num-people ${NUM_PEOPLE}"
-if [[ -n "$RANDOM_SEED" ]]; then
-    SYNTHETIC_ARGS="${SYNTHETIC_ARGS} --random-seed ${RANDOM_SEED}"
-fi
-run_loader "run-load-synthetic-people.sh" ${SYNTHETIC_ARGS}
-
-# Load voters for citizens over 18
-run_loader "run-load-voters.sh"
-
-# Deactivate virtual environment
-deactivate
-
-echo "All data loading scripts completed successfully." 
+echo "Data loading process completed successfully." 

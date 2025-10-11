@@ -1,3 +1,6 @@
+DROP TABLE IF EXISTS countries CASCADE;
+
+-- Table Definition
 CREATE TABLE IF NOT EXISTS countries (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL
