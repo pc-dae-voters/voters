@@ -17,4 +17,10 @@ output "connection_string" {
 output "private_dns_zone_id" {
   description = "ID of the private DNS zone"
   value       = azurerm_private_dns_zone.main.id
+}
+
+output "admin_password" {
+  description = "The admin password for the PostgreSQL server"
+  value       = random_password.db_password.result
+  sensitive   = true
 } 

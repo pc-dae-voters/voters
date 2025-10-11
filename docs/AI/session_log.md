@@ -1,6 +1,6 @@
 # AI Session Log
 
-## Session 1: 2024-12-19 - AWS Credential Handling Improvement
+## Session 1: 2025-10-11 - AWS Credential Handling Improvement
 
 **User Request:** Improve the AWS credential handling in the setup script by automatically sourcing a session file before checking credentials.
 
@@ -11,7 +11,7 @@
 
 ---
 
-## Session 2: 2024-12-19 - Places Loader Enhancement
+## Session 2: 2025-10-11 - Places Loader Enhancement
 
 **User Request:** Modify the places loader to extract place names from multiple address CSV files in a folder, using the last element of the "Address" field and always associating places with the "United Kingdom" country ID.
 
@@ -24,7 +24,7 @@
 
 ---
 
-## Session 3: 2024-12-19 - Citizen Table Enhancement
+## Session 3: 2025-10-11 - Citizen Table Enhancement
 
 **User Request:** Add surname, first name, and gender fields to the citizen table (matching the births table) and update the synthetic people loader to populate these fields.
 
@@ -37,7 +37,7 @@
 
 ---
 
-## Session 4: 2024-12-19 - Citizen Changes Table Update
+## Session 4: 2025-10-11 - Citizen Changes Table Update
 
 **User Request:** Update the citizen-changes table to remove the change_type column and convert the details column to JSONB for flexible change tracking.
 
@@ -49,7 +49,7 @@
 
 ---
 
-## Session 5: 2024-12-19 - Marriage Generation
+## Session 5: 2025-10-11 - Marriage Generation
 
 **User Request:** Add marriage generation to the synthetic people loader, including creating a marriages table, generating marriages for eligible citizens with realistic age and gender distributions, and automatically changing a woman's surname upon marriage.
 
@@ -62,7 +62,7 @@
 
 ---
 
-## Session 6: 2024-12-19 - Parent Generation
+## Session 6: 2025-10-11 - Parent Generation
 
 **User Request:** Add parent generation to create children for married couples (man and woman only), with children born after marriage but before the woman turns 35, following a specified child count distribution.
 
@@ -75,7 +75,7 @@
 
 ---
 
-## Session 7: 2024-12-19 - Divorce Generation
+## Session 7: 2025-10-11 - Divorce Generation
 
 **User Request:** Add divorce generation with a 30% divorce rate, assigning divorce dates randomly between marriage and today.
 
@@ -86,7 +86,7 @@
 
 ---
 
-## Session 8: 2024-12-19 - Voter Registration System
+## Session 8: 2025-10-11 - Voter Registration System
 
 **User Request:** Remove the voter-status table and voter_status_id column from the voters table and database setup. Create a new voters loader script to register citizens over 18 as voters, assigning 90% to the open register, setting registration dates to their 18th birthday, assigning random addresses, and ensuring married couples share the same address.
 
@@ -101,7 +101,7 @@
 
 ---
 
-## Session 9: 2024-12-19 - Spring Boot API Application
+## Session 9: 2025-10-11 - Spring Boot API Application
 
 **User Request:** Create a Java Spring Boot application with a controller, service, repository and entity objects to access these tables providing an API that allows for querying and updating the data.
 
@@ -164,7 +164,7 @@ The application provides a complete REST API for managing the voter data infrast
 
 ---
 
-## Session 10: 2024-12-19 - AWS Setup Script Data Volume Integration
+## Session 10: 2025-10-11 - AWS Setup Script Data Volume Integration
 
 **User Request:** Include the data-volume terraform in setup-aws.sh between step 2 and 3 because the Manager VM needs it.
 
@@ -178,7 +178,7 @@ The application provides a complete REST API for managing the voter data infrast
 
 ---
 
-## Session 11: 2024-12-19 - Terraform Templatefile Fix
+## Session 11: 2025-10-11 - Terraform Templatefile Fix
 
 **User Request:** Fix the `setup-aws.sh` script failure during the Manager VM creation step.
 
@@ -189,7 +189,7 @@ The application provides a complete REST API for managing the voter data infrast
 
 ---
 
-## Session 12: 2024-12-19 - AWS Setup Script TF-State Integration
+## Session 12: 2025-10-11 - AWS Setup Script TF-State Integration
 
 **User Request:** Add the do-terraform.sh command to setup-aws.sh to create the @tf-state/.
 
@@ -197,3 +197,80 @@ The application provides a complete REST API for managing the voter data infrast
 
 **Files Modified:**
 - `voters/bin/setup-aws.sh` - Added tf-state creation as the first step and renumbered all other steps.
+
+---
+
+## Session 13: 2025-10-11 - Azure Infrastructure Scaffolding
+
+**User Request:** Can we create the equivalent files in @azure/ that are in @aws/ and a setup-azure.sh in voters/bin to do the same for Azure as setup-aws.sh does for aws?
+
+**Response:** Initiated the creation of the Azure infrastructure to achieve parity with the existing AWS setup. This involved creating the main orchestration script, `setup-azure.sh`, and scaffolding the entire Terraform module structure, including placeholder files for the data volume, manager VM, and AKS cluster.
+
+**Files Created:**
+- `voters/bin/setup-azure.sh` - Main orchestration script for Azure deployment.
+- `voters/infra/azure/data-volume/main.tf`
+- `voters/infra/azure/data-volume/variables.tf`
+- `voters/infra/azure/data-volume/outputs.tf`
+- `voters/infra/azure/mgr-vm/main.tf` (placeholder)
+- `voters/infra/azure/mgr-vm/variables.tf` (placeholder)
+- `voters/infra/azure/mgr-vm/outputs.tf` (placeholder)
+- `voters/infra/azure/mgr-vm/cloud-init.sh` (placeholder)
+- `voters/infra/azure/aks/main.tf` (placeholder)
+- `voters/infra/azure/aks/variables.tf` (placeholder)
+- `voters/infra/azure/aks/outputs.tf` (placeholder)
+
+---
+
+## Session 14: 2025-10-11 - Azure Manager VM Implementation
+
+**User Request:** yes please (in response to implementing the manager VM)
+
+**Response:** Fully implemented the Azure Manager VM Terraform module. This included defining all necessary variables, creating the VM and its associated network resources (public IP, NIC), attaching the data disk, and developing a comprehensive cloud-init script for automated setup on an Ubuntu base.
+
+**Files Modified:**
+- `voters/infra/azure/mgr-vm/main.tf` - Implemented all VM resources.
+- `voters/infra/azure/mgr-vm/variables.tf` - Defined all required input variables.
+- `voters/infra/azure/mgr-vm/outputs.tf` - Exposed the VM's public IP and SSH key.
+- `voters/infra/azure/mgr-vm/cloud-init.sh` - Created a detailed setup script for software installation and environment configuration.
+
+---
+
+## Session 15: 2025-10-11 - Azure Kubernetes Service (AKS) Implementation
+
+**User Request:** yes please (in response to implementing the AKS module)
+
+**Response:** Fully implemented the Azure Kubernetes Service (AKS) Terraform module. This involved defining the `azurerm_kubernetes_cluster` resource, configuring its node pool, network profile for VNet integration, and setting up outputs for the cluster name and raw kubeconfig.
+
+**Files Modified:**
+- `voters/infra/azure/aks/main.tf` - Implemented the AKS cluster resource.
+- `voters/infra/azure/aks/variables.tf` - Defined all required input variables.
+- `voters/infra/azure/aks/outputs.tf` - Exposed the cluster name and kubeconfig.
+
+---
+
+## Session 16: 2025-10-11 - Azure Infrastructure Integration
+
+**User Request:** Can you implement setup-azure.sh please
+
+**Response:** Fully integrated the newly created `data-volume`, `mgr-vm`, and `aks` modules into the root Azure Terraform configuration. This involved updating the main `variables.tf`, `main.tf`, and `outputs.tf` to orchestrate the deployment of all Azure resources, enabling the `setup-azure.sh` script to be fully functional.
+
+**Files Modified:**
+- `voters/infra/azure/modules/database/outputs.tf` - Added admin password to outputs.
+- `voters/infra/azure/variables.tf` - Added variables for new modules.
+- `voters/infra/azure/main.tf` - Added module blocks to orchestrate the full deployment.
+- `voters/infra/azure/outputs.tf` - Added outputs for VM and AKS resources.
+
+---
+
+## Session 17: 2025-10-11 - Azure Utility Scripts Implementation
+
+**User Request:** Can you implement the Azure-specific data upload and SSH scripts (upload-data-azure.sh, mgr-ssh-azure.sh) please
+
+**Response:** Created the Azure-specific utility scripts required for interacting with the manager VM. This included `mgr-ssh-azure.sh` to provide easy SSH access and `upload-data-azure.sh` to handle uploading data files using rsync. The main `setup-azure.sh` script was updated to use these new scripts.
+
+**Files Created:**
+- `voters/bin/mgr-ssh-azure.sh`
+- `voters/bin/upload-data-azure.sh`
+
+**Files Modified:**
+- `voters/bin/setup-azure.sh` - Replaced placeholder comments with calls to the new scripts.

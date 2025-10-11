@@ -64,4 +64,55 @@ variable "db_admin_username" {
 variable "key_vault_id" {
   description = "ID of the Key Vault to store database credentials"
   type        = string
+}
+
+# --- Data Volume ---
+variable "disk_name" {
+  description = "Name of the managed disk"
+  type        = string
+  default     = "voters-data-disk"
+}
+
+variable "disk_size_gb" {
+  description = "Size of the data disk in GB"
+  type        = number
+  default     = 100
+}
+
+# --- Manager VM ---
+variable "vm_name" {
+  description = "Name of the manager virtual machine"
+  type        = string
+  default     = "voters-manager-vm"
+}
+
+variable "vm_size" {
+  description = "Size of the virtual machine"
+  type        = string
+  default     = "Standard_B2s"
+}
+
+variable "admin_username" {
+  description = "Admin username for the virtual machine"
+  type        = string
+  default     = "azureuser"
+}
+
+# --- AKS ---
+variable "cluster_name" {
+  description = "Name of the AKS cluster"
+  type        = string
+  default     = "voters-aks-cluster"
+}
+
+variable "kubernetes_version" {
+  description = "Version of Kubernetes to use for the AKS cluster"
+  type        = string
+  default     = "1.28.5"
+}
+
+variable "node_count" {
+  description = "Number of nodes in the default node pool"
+  type        = number
+  default     = 2
 } 
