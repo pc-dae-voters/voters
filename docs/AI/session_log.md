@@ -161,3 +161,39 @@
 - Health checks: Application monitoring
 
 The application provides a complete REST API for managing the voter data infrastructure with proper separation of concerns, comprehensive documentation, and production-ready features.
+
+---
+
+## Session 10: 2024-12-19 - AWS Setup Script Data Volume Integration
+
+**User Request:** Include the data-volume terraform in setup-aws.sh between step 2 and 3 because the Manager VM needs it.
+
+**Response:** Updated the setup-aws.sh script to include data volume creation as Step 3, ensuring the EBS volume is created before the Manager VM that depends on it. Updated all subsequent step numbers and the final summary to reflect the new sequence.
+
+**Files Modified:**
+- `voters/bin/setup-aws.sh` - Added data volume creation step, renumbered subsequent steps, updated summary, made executable
+
+**Follow-up Fix:**
+- Fixed file permissions to make setup-aws.sh executable (chmod +x)
+
+---
+
+## Session 11: 2024-12-19 - Terraform Templatefile Fix
+
+**User Request:** Fix the `setup-aws.sh` script failure during the Manager VM creation step.
+
+**Response:** Diagnosed and fixed an error in the `voters/infra/aws/mgr-vm/cloud-init.sh` script. The Terraform `templatefile` function was failing due to an unescaped `$` in the shell variable `$RANDOM`. The issue was resolved by escaping the dollar sign (using `$$RANDOM`), allowing Terraform to correctly process the template.
+
+**Files Modified:**
+- `voters/infra/aws/mgr-vm/cloud-init.sh` - Escaped the dollar sign in the `$RANDOM` variable.
+
+---
+
+## Session 12: 2024-12-19 - AWS Setup Script TF-State Integration
+
+**User Request:** Add the do-terraform.sh command to setup-aws.sh to create the @tf-state/.
+
+**Response:** Updated the `setup-aws.sh` script to include the creation of the Terraform state backend as the first step. This ensures the S3 bucket for remote state is created before any other infrastructure, making the script more robust and capable of bootstrapping a new environment from scratch. All subsequent steps were renumbered, and the final summary was updated.
+
+**Files Modified:**
+- `voters/bin/setup-aws.sh` - Added tf-state creation as the first step and renumbered all other steps.

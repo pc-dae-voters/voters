@@ -170,9 +170,12 @@ dmypy.json
 cython_debug/
 
 # Custom Environment
-./**/db-env.sh
+# Credential/secret files
+**/db-env.sh
+infra/azure/.az-sp.sh
 
-.az-sp.sh
+# IDE settings
+.idea/
 
 # SSH Keys
 loader.key

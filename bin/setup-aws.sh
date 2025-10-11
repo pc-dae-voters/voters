@@ -113,27 +113,39 @@ log_success "Using AWS credentials for: $AWS_IDENTITY"
 
 # --- Main Setup Process ---
 
-# Step 1: Create VPC
-log_step "Step 1: Creating VPC Infrastructure"
+# Step 1: Create Terraform State Backend
+log_step "Step 1: Creating Terraform State Backend"
+echo "Creating S3 bucket for Terraform state..."
+./bin/do-terraform.sh --path infra/aws/tf-state
+log_success "Terraform state backend created successfully"
+
+# Step 2: Create VPC
+log_step "Step 2: Creating VPC Infrastructure"
 echo "Creating VPC, subnets, and networking components..."
 ./bin/do-terraform.sh --path infra/aws/vpc
 log_success "VPC infrastructure created successfully"
 
-# Step 2: Create Database
-log_step "Step 2: Creating Database Infrastructure"
+# Step 3: Create Database
+log_step "Step 3: Creating Database Infrastructure"
 echo "Creating RDS database and security groups..."
 ./bin/do-terraform.sh --path infra/aws/db
 log_success "Database infrastructure created successfully"
 
-# Step 3: Create Manager VM
-log_step "Step 3: Creating Manager VM"
+# Step 4: Create Data Volume
+log_step "Step 4: Creating Data Volume"
+echo "Creating EBS volume for persistent data storage..."
+./bin/do-terraform.sh --path infra/aws/data-volume
+log_success "Data volume created successfully"
+
+# Step 5: Create Manager VM
+log_step "Step 5: Creating Manager VM"
 echo "Creating EC2 instance for data management..."
 ./bin/do-terraform.sh --path infra/aws/mgr-vm
 log_success "Manager VM created successfully"
 
-# Step 4: Upload Data (optional)
+# Step 6: Upload Data (optional)
 if [[ "$SKIP_DATA_UPLOAD" == "false" ]]; then
-    log_step "Step 4: Uploading Data Files"
+    log_step "Step 6: Uploading Data Files"
     echo "Uploading data files to the manager instance..."
     ./bin/upload-data.sh --data-folder ../data
     log_success "Data files uploaded successfully"
@@ -141,9 +153,9 @@ else
     log_warning "Skipping data upload (--skip-data-upload specified)"
 fi
 
-# Step 5: Load Data (optional)
+# Step 7: Load Data (optional)
 if [[ "$SKIP_DATA_LOAD" == "false" ]]; then
-    log_step "Step 5: Loading Data into Database"
+    log_step "Step 7: Loading Data into Database"
     echo "Running data loading scripts on the manager instance..."
     ./bin/mgr-ssh.sh 'load-data.sh'
     log_success "Data loaded into database successfully"
@@ -151,9 +163,9 @@ else
     log_warning "Skipping data load (--skip-data-load specified)"
 fi
 
-# Step 6: Create EKS Cluster (optional)
+# Step 8: Create EKS Cluster (optional)
 if [[ "$SKIP_EKS" == "false" ]]; then
-    log_step "Step 6: Creating EKS Cluster"
+    log_step "Step 8: Creating EKS Cluster"
     echo "Creating Kubernetes cluster for application deployment..."
     ./bin/mgr-ssh.sh 'do-terraform.sh --path infra/aws/eks'
     log_success "EKS cluster created successfully"
@@ -165,8 +177,10 @@ fi
 echo ""
 echo -e "${GREEN}=== Setup Complete! ===${NC}"
 echo "Your AWS infrastructure has been successfully created:"
+echo "  ✅ S3 backend for Terraform state"
 echo "  ✅ VPC with public and private subnets"
 echo "  ✅ RDS PostgreSQL database (VPC-only access)"
+echo "  ✅ EBS data volume for persistent storage"
 echo "  ✅ Manager EC2 instance with data loading capabilities"
 if [[ "$SKIP_DATA_UPLOAD" == "false" ]]; then
     echo "  ✅ Data files uploaded to manager instance"
