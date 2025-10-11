@@ -274,3 +274,15 @@ The application provides a complete REST API for managing the voter data infrast
 
 **Files Modified:**
 - `voters/bin/setup-azure.sh` - Replaced placeholder comments with calls to the new scripts.
+
+---
+
+## Session 18: 2025-10-11 - Infrastructure Teardown Scripts
+
+**User Request:** I need teardown scripts for aws and azure Infrastructure, they should remove all resources created including tf-state
+
+**Response:** Created comprehensive teardown scripts for both AWS and Azure to automate the complete destruction of all created infrastructure. Both scripts destroy resources in the correct reverse dependency order and include a manual confirmation step to prevent accidental deletion.
+
+**Files Created:**
+- `voters/bin/teardown-aws.sh`
+- `voters/bin/teardown-azure.sh`
