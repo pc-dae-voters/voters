@@ -141,6 +141,14 @@ log_success "Data volume created successfully"
 log_step "Step 5: Creating Manager VM"
 echo "Creating EC2 instance for data management..."
 ./bin/do-terraform.sh --path infra/aws/mgr-vm
+
+# Save the IP and private key from the output
+echo "Saving instance IP and private key..."
+(cd infra/aws/mgr-vm && terraform output -raw public_ip > instance-ip.txt)
+(cd infra/aws/mgr-vm && terraform output -raw private_key > loader.key)
+chmod 600 infra/aws/mgr-vm/loader.key
+log_success "Instance IP and private key saved."
+
 log_success "Manager VM created successfully"
 
 # Step 6: Upload Data (optional)

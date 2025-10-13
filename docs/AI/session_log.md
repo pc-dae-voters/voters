@@ -613,3 +613,14 @@ The application provides a complete REST API for managing the voter data infrast
 
 **Files Modified:**
 - [`./bin/do-terraform.sh`](../../bin/do-terraform.sh) - Implemented robust argument parsing to handle default and explicit actions correctly.
+
+---
+
+## Session 44: 2025-10-13 - Fix Stale IP Address in Setup Script
+
+**User Request:** setup failed
+
+**Response:** Fixed a critical error in the `setup-aws.sh` script where the data upload step was failing due to a stale IP address. The script was not saving the public IP of the newly created manager VM. The script has been updated to query the Terraform output for the `public_ip` and `private_key` after the VM is created and save them to the files expected by the subsequent scripts (`instance-ip.txt` and `loader.key`), ensuring that all remote operations target the correct, newly-provisioned instance.
+
+**Files Modified:**
+- [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added steps to save the instance IP and private key from Terraform outputs.
