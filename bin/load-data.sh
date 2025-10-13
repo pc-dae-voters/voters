@@ -4,10 +4,10 @@
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-VENV_DIR="$SCRIPT_DIR/../.venv"
+VENV_DIR="$PROJECT_ROOT/.venv"
 
 # Source the database environment variables
-DB_ENV_FILE="$SCRIPT_DIR/../infra/db/db-env.sh"
+DB_ENV_FILE="$PROJECT_ROOT/infra/db/db-env.sh"
 
 if [[ -f "$DB_ENV_FILE" ]]; then
     source "$DB_ENV_FILE"
@@ -20,14 +20,13 @@ else
     export PGPASSWORD="${PGPASSWORD:-password}"
 fi
 
-# Recreate virtual environment to ensure it's valid
-echo "Recreating Python virtual environment..."
-rm -rf "${VENV_DIR}"
-python3 -m venv "${VENV_DIR}"
-
 # Function to activate virtual environment
 activate_venv() {
     echo "Activating virtual environment..."
+    if [[ ! -f "${VENV_DIR}/bin/activate" ]]; then
+        echo "Virtual environment not found, creating..."
+        python3 -m venv "${VENV_DIR}"
+    fi
     source "${VENV_DIR}/bin/activate"
 }
 

@@ -8,6 +8,11 @@ output "resource_group_location" {
   value       = azurerm_resource_group.main.location
 }
 
+output "tags" {
+  description = "Tags applied to the resource group"
+  value       = azurerm_resource_group.main.tags
+}
+
 output "vnet_name" {
   description = "Name of the virtual network"
   value       = module.network.vnet_name

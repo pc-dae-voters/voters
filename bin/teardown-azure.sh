@@ -3,7 +3,7 @@
 # Azure Infrastructure Teardown Script
 # This script automates the complete destruction of the Voters project Azure infrastructure.
 # WARNING: This is a destructive operation and will remove all created resources.
-# Version: 1.0
+# Version: 2.0
 # Author: Gemini (Daemon Consulting Software Engineer)
 
 set -euo pipefail
@@ -104,35 +104,36 @@ az account set --subscription "$AZURE_SUBSCRIPTION_ID" >/dev/null 2>&1
 log_success "Using Azure credentials for teardown."
 
 # --- Main Teardown Process ---
-destroy_module() {
-    local MODULE_PATH=$1
-    log_step "Destroying $MODULE_PATH"
-    if [ -d "$MODULE_PATH" ]; then
-        ./bin/do-terraform.sh --path "$MODULE_PATH" --destroy --apply -auto-approve
-        log_success "$MODULE_PATH destroyed successfully."
-    else
-        log_warning "Module path $MODULE_PATH not found, skipping."
-    fi
-}
+# To ensure a clean slate and avoid issues with orphaned resources (like AKS NICs locking subnets),
+# the most reliable method is to delete the entire resource groups directly via the Azure CLI.
 
-# Step 1: Destroy AKS Cluster
-destroy_module "infra/azure/aks"
+RESOURCE_GROUP_NAME="pc-dae-voters-rg"
+TFSTATE_RESOURCE_GROUP_NAME="pc-dae-voters-tfstate"
 
-# Step 2: Destroy Manager VM
-destroy_module "infra/azure/mgr-vm"
+log_step "Deleting main resource group: ${RESOURCE_GROUP_NAME}"
+if az group show --name "${RESOURCE_GROUP_NAME}" &>/dev/null; then
+    echo "Resource group '${RESOURCE_GROUP_NAME}' found. Deleting..."
+    az group delete --name "${RESOURCE_GROUP_NAME}" --yes --no-wait
+    log_success "Deletion of '${RESOURCE_GROUP_NAME}' initiated in the background."
+else
+    log_warning "Resource group '${RESOURCE_GROUP_NAME}' not found. Skipping."
+fi
 
-# Step 3: Destroy Data Volume
-destroy_module "infra/azure/data-volume"
+log_step "Deleting Terraform state resource group: ${TFSTATE_RESOURCE_GROUP_NAME}"
+if az group show --name "${TFSTATE_RESOURCE_GROUP_NAME}" &>/dev/null; then
+    echo "Resource group '${TFSTATE_RESOURCE_GROUP_NAME}' found. Deleting..."
+    az group delete --name "${TFSTATE_RESOURCE_GROUP_NAME}" --yes --no-wait
+    log_success "Deletion of '${TFSTATE_RESOURCE_GROUP_NAME}' initiated in the background."
+else
+    log_warning "Resource group '${TFSTATE_RESOURCE_GROUP_NAME}' not found. Skipping."
+fi
 
-# Step 4: Destroy Core Infrastructure (VNet, DB)
-# Note: The main module contains the resource group, which must be destroyed last among the main resources.
-destroy_module "infra/azure"
-
-# Step 5: Destroy Terraform State Backend
-destroy_module "infra/azure/tf-state"
+# It can take a long time to delete resource groups. The script will now exit.
+# You can monitor the deletion progress in the Azure Portal.
 
 # --- Final Summary ---
 echo ""
-echo -e "${GREEN}=== Teardown Complete! ===${NC}"
-echo "All Voters project Azure infrastructure has been successfully destroyed."
-log_success "Azure teardown completed."
+echo -e "${GREEN}=== Teardown Initiated! ===${NC}"
+echo "Resource group deletion has been initiated in the background."
+echo "Please monitor the Azure Portal to confirm when the resource groups are fully deleted before running setup again."
+log_success "Azure teardown initiated."

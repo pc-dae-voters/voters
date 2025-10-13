@@ -25,6 +25,7 @@ resource "azurerm_network_interface" "manager" {
   name                = "${var.vm_name}-nic"
   location            = var.location
   resource_group_name = var.resource_group_name
+  tags                = var.tags
 
   ip_configuration {
     name                          = "internal"
@@ -32,8 +33,6 @@ resource "azurerm_network_interface" "manager" {
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = azurerm_public_ip.manager.id
   }
-
-  tags = var.tags
 }
 
 # --- VM ---
@@ -79,7 +78,7 @@ resource "azurerm_linux_virtual_machine" "manager" {
 resource "azurerm_virtual_machine_data_disk_attachment" "data" {
   managed_disk_id    = var.data_disk_id
   virtual_machine_id = azurerm_linux_virtual_machine.manager.id
-  lun                = "10"
+  lun                = 10
   caching            = "ReadWrite"
 }
 

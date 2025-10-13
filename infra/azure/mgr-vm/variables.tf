@@ -1,15 +1,5 @@
-variable "resource_group_name" {
-  description = "Name of the resource group"
-  type        = string
-}
-
-variable "location" {
-  description = "Azure region where resources will be created"
-  type        = string
-}
-
 variable "vm_name" {
-  description = "Name of the manager virtual machine"
+  description = "Name of the virtual machine"
   type        = string
   default     = "voters-manager-vm"
 }
@@ -26,18 +16,28 @@ variable "admin_username" {
   default     = "azureuser"
 }
 
+variable "resource_group_name" {
+  description = "Name of the resource group"
+  type        = string
+}
+
+variable "location" {
+  description = "Azure region where resources will be created"
+  type        = string
+}
+
 variable "subnet_id" {
   description = "ID of the subnet where the VM will be deployed"
   type        = string
 }
 
 variable "data_disk_id" {
-  description = "ID of the managed disk to attach to the VM"
+  description = "ID of the managed disk to attach"
   type        = string
 }
 
 variable "db_host" {
-  description = "Database host FQDN"
+  description = "Database host"
   type        = string
 }
 
@@ -57,19 +57,20 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
+
 variable "cloud_init_version" {
-  description = "Version of the cloud-init script to force re-execution"
+  description = "Version of the cloud-init script"
   type        = string
   default     = "1.0"
 }
 
 variable "terraform_version" {
-  description = "Version of Terraform to install in the VM"
+  description = "Version of Terraform to install on the VM"
   type        = string
-  default     = "1.7.0"
-}
-
-variable "tags" {
-  description = "Tags to apply to all resources"
-  type        = map(string)
+  default     = "1.5.7"
 }

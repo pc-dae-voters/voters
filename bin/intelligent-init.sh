@@ -71,7 +71,9 @@ if is_azure_module; then
     echo "Azure module detected. Attempting to fetch backend configuration..."
     # Use process substitution to read lines into the array
     # The || true prevents the script exiting if get_azure_backend_config fails, allowing us to handle the error.
-    readarray -t BACKEND_ARGS < <(get_azure_backend_config || true)
+    while IFS= read -r line; do
+        BACKEND_ARGS+=("$line")
+    done < <(get_azure_backend_config || true)
     
     # Check if the array is empty, which indicates get_azure_backend_config failed
     if [ ${#BACKEND_ARGS[@]} -eq 0 ]; then
@@ -84,8 +86,13 @@ fi
 # Run terraform init, capturing stderr to check for specific errors
 stderr_file=$(mktemp)
 
-echo "Running: terraform init -upgrade -no-color ${BACKEND_ARGS[*]}"
-if ! terraform init -upgrade -no-color "${BACKEND_ARGS[@]}" 2> "$stderr_file"; then
+INIT_COMMAND=("terraform" "init" "-upgrade" "-no-color")
+if [ ${#BACKEND_ARGS[@]} -gt 0 ]; then
+    INIT_COMMAND+=("${BACKEND_ARGS[@]}")
+fi
+
+echo "Running: ${INIT_COMMAND[*]}"
+if ! "${INIT_COMMAND[@]}" 2> "$stderr_file"; then
     # If init fails, check for the "Backend configuration changed" error.
     if grep -q "Backend configuration changed" "$stderr_file"; then
         echo "Backend configuration changed. Re-running with -reconfigure..."

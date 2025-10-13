@@ -153,18 +153,11 @@ else
     log_warning "Skipping data upload (--skip-data-upload specified)"
 fi
 
-# Upload Script Fixes
-log_step "Uploading Script Fixes"
-echo "Uploading critical script fixes to the manager instance..."
-IP_FILE="infra/aws/mgr-vm/instance-ip.txt"
-KEY_FILE="infra/aws/mgr-vm/loader.key"
-if [[ -f "$IP_FILE" && -f "$KEY_FILE" ]]; then
-    INSTANCE_IP=$(cat "$IP_FILE")
-    scp -i "$KEY_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null db/load-con-postcodes.py ec2-user@"$INSTANCE_IP":/home/ec2-user/pc-dae-voters/db/load-con-postcodes.py
-    log_success "Script fixes uploaded successfully"
-else
-    log_warning "Could not upload script fixes: IP or Key file not found."
-fi
+# Update Scripts on Manager Instance
+log_step "Updating scripts on manager instance"
+echo "Pulling latest changes from git..."
+./bin/mgr-ssh.sh 'cd /home/ec2-user/pc-dae-voters && git pull'
+log_success "Scripts updated successfully"
 
 # Step 7: Load Data (optional)
 if [[ "$SKIP_DATA_LOAD" == "false" ]]; then

@@ -155,6 +155,12 @@ else
     log_warning "Skipping data upload (--skip-data-upload specified)"
 fi
 
+# Update Scripts on Manager Instance
+log_step "Updating scripts on manager instance"
+echo "Pulling latest changes from git..."
+./bin/mgr-ssh-azure.sh 'cd ~/pc-dae-voters && git pull'
+log_success "Scripts updated successfully"
+
 # Step 6: Load Data (optional)
 if [[ "$SKIP_DATA_LOAD" == "false" ]]; then
     log_step "Step 6: Loading Data into Database"

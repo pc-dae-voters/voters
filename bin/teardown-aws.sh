@@ -106,37 +106,22 @@ log_success "Using AWS credentials for teardown."
 # --- Main Teardown Process ---
 # Resources are destroyed in the reverse order of creation.
 
-destroy_module() {
-    local MODULE_PATH=$1
-    log_step "Destroying $MODULE_PATH"
-    if [ -d "$MODULE_PATH" ]; then
-        ./bin/do-terraform.sh --path "$MODULE_PATH" --destroy --apply -auto-approve
-        log_success "$MODULE_PATH destroyed successfully."
-    else
-        log_warning "Module path $MODULE_PATH not found, skipping."
-    fi
-}
+echo "=== Destroying infra/aws/eks ==="
+./bin/do-terraform.sh --path infra/aws/eks --destroy --auto-approve
 
-# Step 1: Destroy EKS Cluster
-destroy_module "infra/aws/eks"
+echo "=== Destroying infra/aws/mgr-vm ==="
+./bin/do-terraform.sh --path infra/aws/mgr-vm --destroy --auto-approve
 
-# Step 2: Destroy Manager VM
-destroy_module "infra/aws/mgr-vm"
+echo "=== Destroying infra/aws/data-volume ==="
+./bin/do-terraform.sh --path infra/aws/data-volume --destroy --auto-approve
 
-# Step 3: Destroy Data Volume
-destroy_module "infra/aws/data-volume"
+echo "=== Destroying infra/aws/db ==="
+./bin/do-terraform.sh --path infra/aws/db --destroy --auto-approve
 
-# Step 4: Destroy Database
-destroy_module "infra/aws/db"
+echo "=== Destroying infra/aws/vpc ==="
+./bin/do-terraform.sh --path infra/aws/vpc --destroy --auto-approve
 
-# Step 5: Destroy VPC
-destroy_module "infra/aws/vpc"
+echo "=== Destroying infra/aws/tf-state ==="
+./bin/do-terraform.sh --path infra/aws/tf-state --destroy --auto-approve
 
-# Step 6: Destroy Terraform State Backend
-destroy_module "infra/aws/tf-state"
-
-# --- Final Summary ---
-echo ""
-echo -e "${GREEN}=== Teardown Complete! ===${NC}"
-echo "All Voters project AWS infrastructure has been successfully destroyed."
-log_success "AWS teardown completed."
+log_success "AWS infrastructure teardown complete"

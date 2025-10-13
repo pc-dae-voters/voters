@@ -1,6 +1,7 @@
 module "backup_bucket" {
-  source = "../modules/s3"
-  name   = "${var.bucket_name}"
+  source        = "../modules/s3"
+  name          = var.bucket_name
+  force_destroy = true
 }
 
 module "terraform_lock" {
