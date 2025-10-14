@@ -186,43 +186,51 @@ systemctl enable voters-manager.service
 systemctl start voters-manager.service
 
 # --- Disk Management ---
+# Redirect all output from this block to a log file for easier debugging
+exec > /tmp/cloud-init-disk-setup.log 2>&1
+set -ex
+
 echo ">>> Starting disk management..."
 
 # Install tools for disk formatting
 apt-get update
 apt-get install -y xfsprogs parted
 
-# We need to wait for the disk to be attached and available.
-echo ">>> Waiting for data disk to appear..."
-DATA_DISK_ID="scsi-0HC_Azure_Serial-voters-data-disk-lun10"
-DATA_DISK_PATH=""
+# Use LUN to find the right disk, which is the most reliable method on Azure
+LUN=10
+DATA_DISK=""
+echo ">>> Waiting for data disk with LUN $LUN to appear..."
 for i in {1..30}; do
-    if [[ -e /dev/disk/by-id/$DATA_DISK_ID ]]; then
-        DATA_DISK_PATH="/dev/disk/by-id/$DATA_DISK_ID"
-        echo ">>> Data disk found at $DATA_DISK_PATH"
-        break
-    fi
+    for disk in $(ls /sys/class/scsi_disk/); do
+        if [ "$(cat /sys/class/scsi_disk/${disk}/device/lun)" -eq "$LUN" ]; then
+            DEVICE_NAME=$(ls /sys/class/scsi_disk/${disk}/device/block/)
+            DATA_DISK="/dev/${DEVICE_NAME}"
+            echo ">>> Found disk with LUN $LUN at $DATA_DISK"
+            break 2
+        fi
+    done
     sleep 5
 done
 
-if [[ -z "$DATA_DISK_PATH" ]]; then
-    echo ">>> CRITICAL: Data disk was not found after 150 seconds. Aborting."
+if [[ -z "$DATA_DISK" ]]; then
+    echo ">>> CRITICAL: Data disk with LUN $LUN was not found after 150 seconds. Aborting."
+    ls -l /dev/disk/by-id/
     exit 1
 fi
 
 # Partition and format the data disk
-echo ">>> Partitioning and formatting the data disk..."
-parted "$DATA_DISK_PATH" --script mklabel gpt mkpart xfspart xfs 0% 100%
-PARTITION_PATH="$${DATA_DISK_PATH}-part1"
+echo ">>> Partitioning and formatting $DATA_DISK..."
+parted "$DATA_DISK" --script mklabel gpt mkpart primary xfs 0% 100%
 sleep 5 # Give a moment for the partition to be recognized by the kernel
-mkfs.xfs -f "$PARTITION_PATH"
+PARTITION="${DATA_DISK}1"
+mkfs.xfs -f "$PARTITION"
 echo ">>> Disk formatted."
 
 # Mount the data disk
 echo ">>> Mounting the data disk..."
 mkdir -p /mnt/data
-mount "$PARTITION_PATH" /mnt/data
-echo "$PARTITION_PATH /mnt/data xfs defaults,nofail 0 2" >> /etc/fstab
+mount "$PARTITION" /mnt/data
+echo "$PARTITION /mnt/data xfs defaults,nofail 0 2" >> /etc/fstab
 echo ">>> Disk mounted."
 
 # Create the target directory for data uploads on the mounted disk and set permissions
@@ -232,6 +240,9 @@ chown -R azureuser:azureuser /mnt/data
 ln -s /mnt/data/uploads /data
 echo ">>> Upload directory created."
 
+# Stop redirecting output
+set +ex
+exec >/dev/null 2>&1
 
 # --- Install Docker ---
 # Add Docker's official GPG key:
