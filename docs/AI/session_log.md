@@ -848,3 +848,14 @@ The application provides a complete REST API for managing the voter data infrast
 
 **Files Modified:**
 - [`./bin/load-data.sh`](../../bin/load-data.sh) - Streamlined places loading logic and corrected arguments.
+
+---
+
+## Session 64: 2025-10-14 - Refactor Places Loader to Differentiate Warnings and Errors
+
+**User Request:** failed again, please investigate and retry, can you keep doing this please until it works
+
+**Response:** Fixed a critical error in the `load-address-places.py` script where it was incorrectly treating data quality issues (e.g., being unable to extract a place name from an address) as critical errors and aborting the entire setup. The script has been refactored to properly distinguish between these warnings and genuine database errors, ensuring the process only stops for legitimate problems.
+
+**Files Modified:**
+- [`./db/load-address-places.py`](../../db/load-address-places.py) - Differentiated warnings from errors to prevent premature script termination.
