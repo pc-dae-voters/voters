@@ -43,12 +43,19 @@ resource "azurerm_linux_virtual_machine" "manager" {
   size                            = var.vm_size
   admin_username                  = var.admin_username
   disable_password_authentication = true
-  network_interface_ids           = [azurerm_network_interface.manager.id]
+  network_interface_ids           = [
+    azurerm_network_interface.manager.id,
+  ]
 
   admin_ssh_key {
     username   = var.admin_username
     public_key = tls_private_key.manager_key.public_key_openssh
   }
+
+  custom_data = base64encode(templatefile("${path.module}/cloud-init-multipart.tftpl", {
+    cloud_init_sh = file("${path.module}/cloud-init.sh")
+    post_init_sh  = file("${path.module}/post-init.sh")
+  }))
 
   os_disk {
     caching              = "ReadWrite"
@@ -61,33 +68,6 @@ resource "azurerm_linux_virtual_machine" "manager" {
     sku       = "22_04-lts-gen2"
     version   = "latest"
   }
-
-  data "template_file" "cloud_init_combined" {
-    template = <<-EOT
-      Content-Type: multipart/mixed; boundary="//"
-      MIME-Version: 1.0
-
-      --//
-      Content-Type: text/x-shellscript; charset="us-ascii"
-      MIME-Version: 1.0
-      Content-Transfer-Encoding: 7bit
-      Content-Disposition: attachment; filename="cloud-init.sh"
-
-      ${file("${path.module}/cloud-init.sh")}
-
-      --//
-      Content-Type: text/x-shellscript; charset="us-ascii"
-      MIME-Version: 1.0
-      Content-Transfer-Encoding: 7bit
-      Content-Disposition: attachment; filename="post-init.sh"
-
-      ${file("${path.module}/post-init.sh")}
-
-      --//
-    EOT
-  }
-
-  custom_data = data.template_file.cloud_init_combined.rendered
 
   tags = var.tags
 }
