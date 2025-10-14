@@ -201,10 +201,10 @@ LUN=10
 DATA_DISK=""
 echo ">>> Waiting for data disk with LUN $LUN to appear..."
 for i in {1..30}; do
-    for disk in $(ls /sys/class/scsi_disk/); do
-        if [ "$(cat /sys/class/scsi_disk/${disk}/device/lun)" -eq "$LUN" ]; then
-            DEVICE_NAME=$(ls /sys/class/scsi_disk/${disk}/device/block/)
-            DATA_DISK="/dev/${DEVICE_NAME}"
+    for disk in $$(ls /sys/class/scsi_disk/); do
+        if [ "$$(cat /sys/class/scsi_disk/$${disk}/device/lun)" -eq "$LUN" ]; then
+            DEVICE_NAME=$$(ls /sys/class/scsi_disk/$${disk}/device/block/)
+            DATA_DISK="/dev/$${DEVICE_NAME}"
             echo ">>> Found disk with LUN $LUN at $DATA_DISK"
             break 2
         fi
