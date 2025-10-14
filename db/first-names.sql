@@ -3,7 +3,7 @@ DROP TABLE IF EXISTS first_names CASCADE;
 -- Table Definition
 CREATE TABLE IF NOT EXISTS first_names (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL UNIQUE,
     gender CHAR(1)
 );
 
