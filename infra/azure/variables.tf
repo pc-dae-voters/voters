@@ -88,9 +88,15 @@ variable "vm_size" {
 }
 
 variable "admin_username" {
-  description = "Admin username for the virtual machine"
+  description = "Admin username for the manager VM"
   type        = string
   default     = "azureuser"
+}
+
+variable "cloud_init_version" {
+  description = "A version number for the cloud-init script, used to force re-provisioning on changes."
+  type        = string
+  default     = "1.0.0"
 }
 
 # --- Key Vault ---
@@ -100,7 +106,7 @@ variable "key_vault_name" {
   default     = "voters-key-vault-unique" # Needs to be globally unique
 }
 
-# --- AKS ---
+# --- AKS Cluster Variables ---
 variable "cluster_name" {
   description = "Name of the AKS cluster"
   type        = string

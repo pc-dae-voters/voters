@@ -80,8 +80,7 @@ module "data_volume" {
 
 # Manager VM
 module "mgr_vm" {
-  source = "./mgr-vm"
-
+  source              = "./mgr-vm"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   subnet_id           = module.network.subnet_ids["app"]
@@ -93,6 +92,7 @@ module "mgr_vm" {
   db_name             = module.database.db_name
   db_username         = var.db_admin_username
   db_password         = module.database.admin_password
+  cloud_init_version  = var.cloud_init_version
   tags                = var.tags
 }
 

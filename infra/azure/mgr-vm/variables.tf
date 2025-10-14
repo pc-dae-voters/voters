@@ -63,14 +63,14 @@ variable "tags" {
   default     = {}
 }
 
-variable "cloud_init_version" {
-  description = "Version of the cloud-init script"
+variable "terraform_version" {
+  description = "Version of Terraform to install in the VM"
   type        = string
-  default     = "1.0"
+  default     = "1.6.2"
 }
 
-variable "terraform_version" {
-  description = "Version of Terraform to install on the VM"
+variable "cloud_init_version" {
+  description = "Version of the cloud-init script to force re-provisioning"
   type        = string
-  default     = "1.5.7"
+  default     = "1.0.0"
 }
