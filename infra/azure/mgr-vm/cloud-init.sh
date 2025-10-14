@@ -185,36 +185,53 @@ chmod +x /usr/local/bin/voters-setup-delayed.sh
 systemctl enable voters-manager.service
 systemctl start voters-manager.service
 
+# --- Disk Management ---
+echo ">>> Starting disk management..."
+
+# Install tools for disk formatting
+apt-get update
+apt-get install -y xfsprogs parted
+
 # We need to wait for the disk to be attached and available.
-# The disk is attached at LUN 10 as specified in the Terraform config.
-# SCSI devices can be slow to show up, so we'll wait for it.
-DATA_DISK=""
+echo ">>> Waiting for data disk to appear..."
+DATA_DISK_ID="scsi-0HC_Azure_Serial-voters-data-disk-lun10"
+DATA_DISK_PATH=""
 for i in {1..30}; do
-    if [[ -e /dev/disk/by-id/scsi-0HC_Azure_Serial-voters-data-disk-lun10 ]]; then
-        DATA_DISK="/dev/disk/by-id/scsi-0HC_Azure_Serial-voters-data-disk-lun10"
+    if [[ -e /dev/disk/by-id/$DATA_DISK_ID ]]; then
+        DATA_DISK_PATH="/dev/disk/by-id/$DATA_DISK_ID"
+        echo ">>> Data disk found at $DATA_DISK_PATH"
         break
     fi
     sleep 5
 done
 
-if [[ -z "$DATA_DISK" ]]; then
-    echo "Data disk was not found after 150 seconds. Aborting."
+if [[ -z "$DATA_DISK_PATH" ]]; then
+    echo ">>> CRITICAL: Data disk was not found after 150 seconds. Aborting."
     exit 1
 fi
 
 # Partition and format the data disk
-parted "$DATA_DISK" --script mklabel gpt mkpart xfspart xfs 0% 100%
-mkfs.xfs -f "$${DATA_DISK}-part1"
+echo ">>> Partitioning and formatting the data disk..."
+parted "$DATA_DISK_PATH" --script mklabel gpt mkpart xfspart xfs 0% 100%
+PARTITION_PATH="$${DATA_DISK_PATH}-part1"
+sleep 5 # Give a moment for the partition to be recognized by the kernel
+mkfs.xfs -f "$PARTITION_PATH"
+echo ">>> Disk formatted."
 
 # Mount the data disk
+echo ">>> Mounting the data disk..."
 mkdir -p /mnt/data
-mount "$${DATA_DISK}-part1" /mnt/data
-echo "$${DATA_DISK}-part1 /mnt/data xfs defaults,nofail 0 2" >> /etc/fstab
+mount "$PARTITION_PATH" /mnt/data
+echo "$PARTITION_PATH /mnt/data xfs defaults,nofail 0 2" >> /etc/fstab
+echo ">>> Disk mounted."
 
 # Create the target directory for data uploads on the mounted disk and set permissions
+echo ">>> Creating upload directory and setting permissions..."
 mkdir -p /mnt/data/uploads
-chown -R azureuser:azureuser /mnt/data/uploads
+chown -R azureuser:azureuser /mnt/data
 ln -s /mnt/data/uploads /data
+echo ">>> Upload directory created."
+
 
 # --- Install Docker ---
 # Add Docker's official GPG key:

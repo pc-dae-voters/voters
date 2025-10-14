@@ -754,3 +754,64 @@ The application provides a complete REST API for managing the voter data infrast
 
 **Files Modified:**
 - [`./bin/load-data.sh`](../../bin/load-data.sh) - Corrected script pathing for Python loader execution.
+
+---
+
+## Session 56: 2025-10-14 - Final Schema and Naming Fixes
+
+**User Request:** failed to load first-names again
+
+**Response:** Fixed two final, critical schema and naming errors. First, the `con-postcodes.sql` script was creating a table named `con_postcodes` while the Python loader expected `"con-postcodes"`. The SQL file has been updated to use the correct hyphenated name. Second, the `first-names.sql` script was missing a `UNIQUE` constraint on the `name` column, which caused the `ON CONFLICT` clause in the Python loader to fail. This constraint has now been added.
+
+**Files Modified:**
+- [`./db/con-postcodes.sql`](../../db/con-postcodes.sql) - Corrected table name to `"con-postcodes"`.
+- [`./db/first-names.sql`](../../db/first-names.sql) - Added `UNIQUE` constraint to the `name` column.
+
+---
+
+## Session 57: 2025-10-14 - Improve Setup Script Error Handling
+
+**User Request:** it failed again, when a loader fails stop the setup script...
+
+**Response:** Improved the robustness of the main `setup-aws.sh` script by adding explicit error handling. The script will now check the exit code of the remote `create-tables.sh` and `load-data.sh` scripts and will immediately abort with a clear error message if either of them fails.
+
+**Files Modified:**
+- [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added explicit error checking for remote script execution.
+
+---
+
+## Session 58: 2025-10-14 - Final Robustness and Schema Fixes
+
+**User Request:** load -con-postcodes.py failed again and you didn't abandon the setup script, please fix it and stop setup/loading scripts when error limit is reached
+
+**Response:** Implemented a final set of fixes to ensure the data loading process is robust. First, the `con_code` column in the `con-postcodes` table was too small, causing a "value too long" error; its size has been increased. Second, all Python data loader scripts were updated to ensure they exit with a non-zero status code if the error limit is reached, which now correctly causes the main `setup-aws.sh` script to abort as intended.
+
+**Files Modified:**
+- [`./db/con-postcodes.sql`](../../db/con-postcodes.sql) - Increased column size to prevent data truncation errors.
+- [`./db/load-con-postcodes.py`](../../db/load-con-postcodes.py) - Added `sys.exit(1)` on error.
+- [`./db/load-constituencies.py`](../../db/load-constituencies.py) - Added `sys.exit(1)` on error.
+- [`./db/load-names-from-csv.py`](../../db/load-names-from-csv.py) - Added `sys.exit(1)` on error.
+- [`./db/load-voters.py`](../../db/load-voters.py) - Added `sys.exit(1)` on error.
+
+---
+
+## Session 59: 2025-10-14 - Differentiate Warnings and Errors in Loaders
+
+**User Request:** failed again, you need to distinuish between warnings and errors
+
+**Response:** Fixed a critical flaw in the data loader scripts where data quality warnings (e.g., missing values in a row) were being incorrectly counted as errors, causing the entire setup process to abort unnecessarily. The `load-con-postcodes.py` and `load-addresses.py` scripts have been refactored to properly distinguish between warnings and true errors, ensuring that only genuine database or file processing exceptions will halt the script.
+
+**Files Modified:**
+- [`./db/load-con-postcodes.py`](../../db/load-con-postcodes.py) - Differentiated warnings from errors.
+- [`./db/load-addresses.py`](../../db/load-addresses.py) - Differentiated warnings from errors.
+
+---
+
+## Session 60: 2025-10-14 - Fix Final Python Loader Bug
+
+**User Request:** (implied)
+
+**Response:** Fixed a final `local variable 'inserted_count' referenced before assignment` error in the `load-names-from-csv.py` script. This was caused by incorrect variable scoping and flawed logic in the data processing functions. The script has been substantially refactored to correctly initialize variables, handle data structures, and process errors, which will resolve the crash.
+
+**Files Modified:**
+- [`./db/load-names-from-csv.py`](../../db/load-names-from-csv.py) - Refactored to fix variable scoping and logic errors.
