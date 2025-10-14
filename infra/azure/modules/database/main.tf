@@ -42,8 +42,14 @@ resource "random_password" "db_password" {
   special = true
 }
 
+resource "random_string" "secret_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+}
+
 resource "azurerm_key_vault_secret" "db_password" {
-  name         = "${var.server_name}-password"
+  name         = "${var.server_name}-password-${random_string.secret_suffix.result}"
   value        = random_password.db_password.result
   key_vault_id = var.key_vault_id
 } 
