@@ -221,7 +221,7 @@ def main():
                     citizen_status = 'N' if random.random() < 0.9 else 'F' 
 
                 # Get citizen-status ID for the status
-                cursor.execute("SELECT id FROM citizen-status WHERE code = %s;", (citizen_status,))
+                cursor.execute("SELECT id FROM citizen_status WHERE code = %s;", (citizen_status,))
                 status_result = cursor.fetchone()
                 if not status_result:
                     print(f"Error: Citizen status '{citizen_status}' not found in citizen-status table.", file=sys.stderr)
@@ -374,7 +374,7 @@ def main():
                         }
                         
                         cursor.execute(
-                            "INSERT INTO citizen-changes (citizen_id, change_date, details) VALUES (%s, %s, %s);",
+                            "INSERT INTO citizen_changes (citizen_id, change_date, details) VALUES (%s, %s, %s);",
                             (partner_id, marriage_date, json.dumps(change_details))
                         )
                     
@@ -485,7 +485,7 @@ def main():
                         child_citizen_status = 'N' if random.random() < 0.9 else 'F'
                     
                     # Get citizen-status ID for the child
-                    cursor.execute("SELECT id FROM citizen-status WHERE code = %s;", (child_citizen_status,))
+                    cursor.execute("SELECT id FROM citizen_status WHERE code = %s;", (child_citizen_status,))
                     status_result = cursor.fetchone()
                     if not status_result:
                         continue

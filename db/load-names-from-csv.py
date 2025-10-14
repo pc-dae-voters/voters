@@ -43,6 +43,9 @@ def load_names_to_table(conn, table_name, names_to_load, cursor):
             print(f"DB Error inserting name '{name}' into {table_name}: {e}", file=sys.stderr)
             conn.rollback() # Rollback this insert, but continue with others
             error_count += 1
+            if error_count > 100:
+                print(f"Error limit exceeded for table {table_name}. Aborting.", file=sys.stderr)
+                return inserted_count, skipped_count, error_count # Return current counts
         else:
             conn.commit() # Commit successful insert or skip
     return inserted_count, skipped_count, error_count
@@ -52,7 +55,7 @@ def load_first_names_with_gender_to_table(conn, first_names_data, cursor):
     skipped_count = 0
     error_count = 0
     
-    sql = "INSERT INTO first-names (name, gender) VALUES (%s, %s) ON CONFLICT (name) DO NOTHING;"
+    sql = "INSERT INTO first_names (name, gender) VALUES (%s, %s) ON CONFLICT (name) DO NOTHING;"
     for name, gender in first_names_data:
         if not name: # Skip empty names
             continue
@@ -66,6 +69,9 @@ def load_first_names_with_gender_to_table(conn, first_names_data, cursor):
             print(f"DB Error inserting name '{name}' (gender: {gender}) into first-names: {e}", file=sys.stderr)
             conn.rollback() # Rollback this insert, but continue with others
             error_count += 1
+            if error_count > 100:
+                print(f"Error limit exceeded for table first-names. Aborting.", file=sys.stderr)
+                return inserted_count, skipped_count, error_count
         else:
             conn.commit() # Commit successful insert or skip
     return inserted_count, skipped_count, error_count

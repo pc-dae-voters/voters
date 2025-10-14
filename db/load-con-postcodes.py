@@ -47,6 +47,9 @@ def load_data_from_csv(conn, table_name, csv_file_path):
                     if not postcode or not con_code:
                         print(f"Warning: Row {row_num}: Missing postcode or con_code. Skipping. Data: {row}", file=sys.stderr)
                         error_count += 1
+                        if error_count > 100:
+                            print("Error limit exceeded. Aborting.", file=sys.stderr)
+                            return False
                         continue
                     
                     try:
@@ -58,15 +61,19 @@ def load_data_from_csv(conn, table_name, csv_file_path):
                         print(f"DB Error processing row {row_num}: {e}. Postcode: '{postcode}', Con_Code: '{con_code}'. Skipping.", file=sys.stderr)
                         error_count += 1
                         conn.rollback() # Rollback this row's transaction
+                        if error_count > 100:
+                            print("Error limit exceeded. Aborting.", file=sys.stderr)
+                            return False
             
         print(f"Processed CSV. Successful operations (Inserts/Updates): {successful_ops_count}, Errors/Skipped: {error_count}")
         if error_count > 0:
+            return False
             # If any row had a DB error and was rolled back, we might want to indicate overall script failure.
             # However, the script currently continues and reports errors.
             # To make the script exit with non-zero if ANY row fails due to DB error, 
             # a flag would be needed, checked after the loop, or raise an exception to be caught by the outer try-except.
             # For now, it completes but reports errors.
-            pass # Or: sys.exit(1) if any DB error in loop should mean overall failure
+        return True # Or: sys.exit(1) if any DB error in loop should mean overall failure
 
     except FileNotFoundError:
         print(f"Error: CSV file not found at {csv_file_path}", file=sys.stderr)

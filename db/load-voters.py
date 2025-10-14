@@ -94,49 +94,63 @@ def main():
 
             voters_created = 0
             address_assignments = {}  # Track address assignments for married couples
+            error_count = 0
 
             for citizen_id, birth_date in eligible_citizens:
-                # Calculate 18th birthday
-                eighteenth_birthday = birth_date + timedelta(days=18 * 365.25)
-                
-                # Determine registration date (18th birthday)
-                registration_date = eighteenth_birthday
-                
-                # 90% chance of being on open register
-                open_register = random.random() < 0.9
-                
-                # Assign address
-                if citizen_id in married_partners:
-                    # Married person - check if partner already has an address
-                    partner_id = married_partners[citizen_id]
-                    if partner_id in address_assignments:
-                        # Partner already has an address, use the same one
-                        address_id = address_assignments[partner_id]
+                try:
+                    # Calculate 18th birthday
+                    eighteenth_birthday = birth_date + timedelta(days=18 * 365.25)
+                    
+                    # Determine registration date (18th birthday)
+                    registration_date = eighteenth_birthday
+                    
+                    # 90% chance of being on open register
+                    open_register = random.random() < 0.9
+                    
+                    # Assign address
+                    if citizen_id in married_partners:
+                        # Married person - check if partner already has an address
+                        partner_id = married_partners[citizen_id]
+                        if partner_id in address_assignments:
+                            # Partner already has an address, use the same one
+                            address_id = address_assignments[partner_id]
+                        else:
+                            # Assign new address and share with partner
+                            address_id = random.choice(address_ids)
+                            address_assignments[citizen_id] = address_id
+                            address_assignments[partner_id] = address_id
                     else:
-                        # Assign new address and share with partner
+                        # Single person - assign random address
                         address_id = random.choice(address_ids)
                         address_assignments[citizen_id] = address_id
-                        address_assignments[partner_id] = address_id
-                else:
-                    # Single person - assign random address
-                    address_id = random.choice(address_ids)
-                    address_assignments[citizen_id] = address_id
 
-                # Create voter record
-                cursor.execute(
-                    "INSERT INTO voters (citizen_id, address_id, open_register, registration_date) "
-                    "VALUES (%s, %s, %s, %s);",
-                    (citizen_id, address_id, open_register, registration_date)
-                )
+                    # Create voter record
+                    cursor.execute(
+                        "INSERT INTO voters (citizen_id, address_id, open_register, registration_date) "
+                        "VALUES (%s, %s, %s, %s);",
+                        (citizen_id, address_id, open_register, registration_date)
+                    )
+                    
+                    voters_created += 1
+                    
+                    if voters_created % 100 == 0:
+                        conn.commit()
+                        print(f"  Created {voters_created} voter records so far...")
                 
-                voters_created += 1
-                
-                if voters_created % 100 == 0:
-                    conn.commit()
-                    print(f"  Created {voters_created} voter records so far...")
-            
+                except psycopg2.Error as e:
+                    print(f"DB Error creating voter for citizen {citizen_id}: {e}", file=sys.stderr)
+                    conn.rollback()
+                    error_count += 1
+                    if error_count > 100:
+                        print("Error limit exceeded. Aborting.", file=sys.stderr)
+                        sys.exit(1)
+                    continue
+
             conn.commit()
             print(f"Voter registration complete. Total voters created: {voters_created}.")
+            if error_count > 0:
+                print(f"Completed with {error_count} errors.", file=sys.stderr)
+                sys.exit(1)
 
     except psycopg2.Error as e:
         print(f"A PostgreSQL error occurred: {e}", file=sys.stderr)

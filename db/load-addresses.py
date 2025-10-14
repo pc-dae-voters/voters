@@ -131,6 +131,9 @@ def main():
                             if not street_address or not place_name_from_csv or not normalized_postcode:
                                 print(f"Warning: Row {row_num} in {csv_file_path}: Insufficient data from address ('{street_address}'), place ('{place_name_from_csv}') or postcode ('{normalized_postcode}'). Skipping.", file=sys.stderr)
                                 errors_in_file += 1
+                                if total_errors + errors_in_file > 100:
+                                    print("Error limit exceeded. Aborting.", file=sys.stderr)
+                                    sys.exit(1)
                                 continue
 
                             place_id = get_place_id(conn, place_name_from_csv, target_country_id, cursor)
@@ -155,6 +158,9 @@ def main():
                                 print(f"DB Error inserting address for row {row_num} ('{street_address}', PlaceID:{place_id}, '{normalized_postcode}'): {e}", file=sys.stderr)
                                 conn.rollback()
                                 errors_in_file += 1
+                                if total_errors + errors_in_file > 100:
+                                    print("Error limit exceeded. Aborting.", file=sys.stderr)
+                                    sys.exit(1)
                                 
                 except FileNotFoundError:
                     print(f"Error: CSV file not found during processing: {csv_file_path}", file=sys.stderr)
@@ -162,6 +168,9 @@ def main():
                 except Exception as e:
                     print(f"Error processing file {csv_file_path}: {e}", file=sys.stderr)
                     errors_in_file += 1
+                    if total_errors + errors_in_file > 100:
+                        print("Error limit exceeded. Aborting.", file=sys.stderr)
+                        sys.exit(1)
                     if conn and not conn.closed: conn.rollback()
                 
                 total_inserted += inserted_in_file

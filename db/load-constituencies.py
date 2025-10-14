@@ -99,11 +99,17 @@ def load_data_from_csv(conn, table_name, csv_file_path):
                         print(f"Database error on row {row_num}: {db_e}", file=sys.stderr)
                         error_count += 1
                         conn.rollback()
+                        if error_count > 100:
+                            print("Error limit exceeded. Aborting.", file=sys.stderr)
+                            return False
                         continue
                     except Exception as e:
                         print(f"Error processing row {row_num}: {e}", file=sys.stderr)
                         error_count += 1
                         conn.rollback()
+                        if error_count > 100:
+                            print("Error limit exceeded. Aborting.", file=sys.stderr)
+                            return False
                         continue
 
                 conn.commit()
