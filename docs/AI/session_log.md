@@ -815,3 +815,14 @@ The application provides a complete REST API for managing the voter data infrast
 
 **Files Modified:**
 - [`./db/load-names-from-csv.py`](../../db/load-names-from-csv.py) - Refactored to fix variable scoping and logic errors.
+
+---
+
+## Session 61: 2025-10-14 - Optimize Name Loader Performance
+
+**User Request:** This has been processing MV.csv for a long time, what is going on
+
+**Response:** Diagnosed a severe performance bottleneck in the `load-names-from-csv.py` script. The script was committing each of the ~1.5 million names to the database in a separate transaction, which is extremely inefficient. The script has been refactored to use batch commits of 1000 records, which will dramatically reduce the overhead and allow the data to be loaded in a fraction of the time. Progress indicators have also been added to provide better feedback.
+
+**Files Modified:**
+- [`./db/load-names-from-csv.py`](../../db/load-names-from-csv.py) - Implemented batch commits to improve performance.

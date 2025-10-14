@@ -162,28 +162,25 @@ if [[ "$SKIP_DATA_LOAD" == "false" ]]; then
 else
     log_warning "Skipping data load (--skip-data-load specified)"
 fi
+}
+
+# --- Main Execution ---
+# Clean up from previous runs
+rm -rf infra/azure/.terraform* infra/azure/default.tfplan
+rm -rf infra/azure/tf-state/.terraform* infra/azure/tf-state/default.tfplan
+
+# Run the main setup function and capture its exit code
+main "$@"
+exit_code=$?
 
 # --- Final Summary ---
 echo ""
-echo -e "${GREEN}=== Setup Complete! ===${NC}"
-echo "Your Azure infrastructure has been successfully created:"
-echo "  ✅ Azure Storage backend for Terraform state"
-echo "  ✅ VNet with application and database subnets"
-echo "  ✅ Azure Database for PostgreSQL Flexible Server (VNet-only access)"
-echo "  ✅ Managed Disk for persistent storage"
-echo "  ✅ Manager Linux VM with data loading capabilities"
-echo "  ✅ AKS Kubernetes cluster"
-if [[ "$SKIP_DATA_UPLOAD" == "false" ]]; then
-    echo "  ✅ Data files uploaded to manager instance"
-fi
-if [[ "$SKIP_DATA_LOAD" == "false" ]]; then
-    echo "  ✅ Data loaded into database"
+if [ $exit_code -eq 0 ]; then
+    echo -e "${GREEN}=== Azure Setup Succeeded! ===${NC}"
+    log_success "All Azure infrastructure has been successfully deployed and configured."
+else
+    echo -e "${RED}=== Azure Setup Failed! ===${NC}"
+    log_error "An error occurred during the setup process. Please check the logs above for details."
 fi
 
-echo ""
-echo "Next steps:"
-echo "  • SSH to manager instance: ./bin/mgr-ssh-azure.sh"
-echo "  • Check database: ./bin/db-query-azure.sh"
-echo "  • Deploy applications to AKS cluster"
-echo ""
-log_success "Azure infrastructure setup completed successfully!"
+exit $exit_code
