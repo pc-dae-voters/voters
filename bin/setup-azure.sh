@@ -128,26 +128,14 @@ echo "Creating Azure Storage Account for Terraform state..."
 log_success "Terraform state backend created successfully"
 
 # Step 2: Create Core Infrastructure
-log_step "Step 2: Creating Core Infrastructure (VNet & Database)"
-echo "Creating VNet, subnets, and PostgreSQL Flexible Server..."
+log_step "Step 2: Creating All Azure Infrastructure"
+echo "Creating VNet, Database, Data Volume, Manager VM, and AKS Cluster..."
 ./bin/do-terraform.sh --path infra/azure
-log_success "Core infrastructure created successfully"
+log_success "All Azure infrastructure created successfully"
 
-# Step 3: Create Data Volume
-log_step "Step 3: Creating Data Volume"
-echo "Creating Managed Disk for persistent data storage..."
-./bin/do-terraform.sh --path infra/azure/data-volume
-log_success "Data volume created successfully"
-
-# Step 4: Create Manager VM
-log_step "Step 4: Creating Manager VM"
-echo "Creating Linux VM for data management..."
-./bin/do-terraform.sh --path infra/azure/mgr-vm
-log_success "Manager VM created successfully"
-
-# Step 5: Upload Data (optional)
+# Step 3: Upload Data (optional)
 if [[ "$SKIP_DATA_UPLOAD" == "false" ]]; then
-    log_step "Step 5: Uploading Data Files"
+    log_step "Step 3: Uploading Data Files"
     echo "Uploading data files to the manager instance..."
     ./bin/upload-data-azure.sh --data-folder ../data
     log_success "Data files uploaded successfully"
@@ -161,24 +149,14 @@ echo "Pulling latest changes from git..."
 ./bin/mgr-ssh-azure.sh 'cd ~/pc-dae-voters && git pull'
 log_success "Scripts updated successfully"
 
-# Step 6: Load Data (optional)
+# Step 4: Load Data (optional)
 if [[ "$SKIP_DATA_LOAD" == "false" ]]; then
-    log_step "Step 6: Loading Data into Database"
+    log_step "Step 4: Loading Data into Database"
     echo "Running data loading scripts on the manager instance..."
     ./bin/mgr-ssh-azure.sh '~/load-data.sh'
     log_success "Data loaded into database successfully"
 else
     log_warning "Skipping data load (--skip-data-load specified)"
-fi
-
-# Step 7: Create AKS Cluster (optional)
-if [[ "$SKIP_AKS" == "false" ]]; then
-    log_step "Step 7: Creating AKS Cluster"
-    echo "Creating Kubernetes cluster for application deployment..."
-    ./bin/do-terraform.sh --path infra/azure/aks
-    log_success "AKS cluster created successfully"
-else
-    log_warning "Skipping AKS creation (--skip-aks specified)"
 fi
 
 # --- Final Summary ---
@@ -190,14 +168,12 @@ echo "  ✅ VNet with application and database subnets"
 echo "  ✅ Azure Database for PostgreSQL Flexible Server (VNet-only access)"
 echo "  ✅ Managed Disk for persistent storage"
 echo "  ✅ Manager Linux VM with data loading capabilities"
+echo "  ✅ AKS Kubernetes cluster"
 if [[ "$SKIP_DATA_UPLOAD" == "false" ]]; then
     echo "  ✅ Data files uploaded to manager instance"
 fi
 if [[ "$SKIP_DATA_LOAD" == "false" ]]; then
     echo "  ✅ Data loaded into database"
-fi
-if [[ "$SKIP_AKS" == "false" ]]; then
-    echo "  ✅ AKS Kubernetes cluster"
 fi
 
 echo ""

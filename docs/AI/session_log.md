@@ -624,3 +624,61 @@ The application provides a complete REST API for managing the voter data infrast
 
 **Files Modified:**
 - [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added steps to save the instance IP and private key from Terraform outputs.
+
+---
+
+## Session 45: 2025-10-14 - Fix Data Loading Script Failures
+
+**User Request:** setup failed
+
+**Response:** Fixed two critical errors in the remote data loading process. First, the script was failing because it was trying to install Python dependencies from a `requirements.txt` file that did not exist. This file has now been created with the necessary `psycopg2-binary` and `pandas` packages. Second, the main `load-data.sh` script was not passing the required file path arguments to the individual Python loader scripts. The script has been updated to pass the correct arguments, ensuring the data can be located and loaded into the database.
+
+**Files Created:**
+- [`./db/requirements.txt`](../../db/requirements.txt) - Added missing Python dependencies file.
+
+**Files Modified:**
+- [`./bin/load-data.sh`](../../bin/load-data.sh) - Updated to pass correct arguments to Python data loaders.
+
+---
+
+## Session 46: 2025-10-14 - Fix Constituencies Table Schema
+
+**User Request:** failed again
+
+**Response:** Fixed a critical database schema error that was causing the `load-constituencies.py` script to fail. The script was attempting to insert data into a `code` column that did not exist in the `constituencies` table. The table schema has been updated to include the missing `code` column, which will resolve the transaction abort errors.
+
+**Files Modified:**
+- [`./db/constituencies.sql`](../../db/constituencies.sql) - Added the `code` column to the table schema.
+
+---
+
+## Session 47: 2025-10-14 - Ensure Fresh Database Schema on Setup
+
+**User Request:** still failing
+
+**Response:** Fixed a persistent data loading failure by ensuring the remote database schema is always up-to-date. The root cause was that the database tables were created only once when the manager VM was first provisioned, and subsequent schema changes were not being applied. A new step has been added to `setup-aws.sh` to explicitly run the `create-tables.sh` script on the remote instance before every data load, guaranteeing a fresh and correct schema.
+
+**Files Modified:**
+- [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added a step to recreate database tables before loading data.
+
+---
+
+## Session 48: 2025-10-14 - Fix Remote Script Execution Path
+
+**User Request:** failed
+
+**Response:** Fixed a final error in the `setup-aws.sh` script where remote commands were failing with a "not a git repository" error. This was happening because the scripts were being executed from the wrong directory on the remote machine. The script has been updated to `cd` into the correct project directory before running the `create-tables.sh` and `load-data.sh` scripts, ensuring all paths are resolved correctly.
+
+**Files Modified:**
+- [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added `cd` command to remote script executions to ensure correct working directory.
+
+---
+
+## Session 49: 2025-10-14 - Force Table Recreation for Data Loading
+
+**User Request:** failed
+
+**Response:** Fixed a final, persistent data loading failure. The root cause was that the `create-tables.sh` script was not being instructed to drop the existing tables before recreating them, so the schema was never actually being updated on the remote instance. The `setup-aws.sh` script has been modified to pass the `--delete` flag to the `create-tables.sh` script, which will now force a clean recreation of all tables, ensuring the latest schema is always in place before data loading begins.
+
+**Files Modified:**
+- [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added the `--delete` flag to the `create-tables.sh` remote execution.

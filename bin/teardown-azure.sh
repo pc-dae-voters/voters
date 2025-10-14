@@ -104,36 +104,46 @@ az account set --subscription "$AZURE_SUBSCRIPTION_ID" >/dev/null 2>&1
 log_success "Using Azure credentials for teardown."
 
 # --- Main Teardown Process ---
-# To ensure a clean slate and avoid issues with orphaned resources (like AKS NICs locking subnets),
-# the most reliable method is to delete the entire resource groups directly via the Azure CLI.
+# To ensure a clean slate and avoid issues with orphaned resources (like AKS NICs locking subnets)
+# or soft-deleted resources (like Key Vault secrets), we will take a multi-step approach.
 
+KEY_VAULT_NAME="voters-key-vault-unique"
+SECRET_NAME="pc-dae-voters-db-password"
 RESOURCE_GROUP_NAME="pc-dae-voters-rg"
 TFSTATE_RESOURCE_GROUP_NAME="pc-dae-voters-tfstate"
 
+log_step "Purging Key Vault secrets to prevent conflicts"
+# Check if the vault exists before trying to purge
+if az keyvault show --name "${KEY_VAULT_NAME}" &>/dev/null; then
+    echo "Key Vault '${KEY_VAULT_NAME}' found. Purging secret '${SECRET_NAME}'..."
+    # This command will fail if the secret doesn't exist, which is fine.
+    az keyvault secret purge --vault-name "${KEY_VAULT_NAME}" --name "${SECRET_NAME}" || true
+    log_success "Key Vault secret purge command issued."
+else
+    log_warning "Key Vault '${KEY_VAULT_NAME}' not found. Skipping secret purge."
+fi
+
 log_step "Deleting main resource group: ${RESOURCE_GROUP_NAME}"
 if az group show --name "${RESOURCE_GROUP_NAME}" &>/dev/null; then
-    echo "Resource group '${RESOURCE_GROUP_NAME}' found. Deleting..."
-    az group delete --name "${RESOURCE_GROUP_NAME}" --yes --no-wait
-    log_success "Deletion of '${RESOURCE_GROUP_NAME}' initiated in the background."
+    echo "Resource group '${RESOURCE_GROUP_NAME}' found. Deleting... (this will take several minutes)"
+    az group delete --name "${RESOURCE_GROUP_NAME}" --yes
+    log_success "Deletion of '${RESOURCE_GROUP_NAME}' complete."
 else
     log_warning "Resource group '${RESOURCE_GROUP_NAME}' not found. Skipping."
 fi
 
 log_step "Deleting Terraform state resource group: ${TFSTATE_RESOURCE_GROUP_NAME}"
 if az group show --name "${TFSTATE_RESOURCE_GROUP_NAME}" &>/dev/null; then
-    echo "Resource group '${TFSTATE_RESOURCE_GROUP_NAME}' found. Deleting..."
-    az group delete --name "${TFSTATE_RESOURCE_GROUP_NAME}" --yes --no-wait
-    log_success "Deletion of '${TFSTATE_RESOURCE_GROUP_NAME}' initiated in the background."
+    echo "Resource group '${TFSTATE_RESOURCE_GROUP_NAME}' found. Deleting... (this may take a few minutes)"
+    az group delete --name "${TFSTATE_RESOURCE_GROUP_NAME}" --yes
+    log_success "Deletion of '${TFSTATE_RESOURCE_GROUP_NAME}' complete."
 else
     log_warning "Resource group '${TFSTATE_RESOURCE_GROUP_NAME}' not found. Skipping."
 fi
 
-# It can take a long time to delete resource groups. The script will now exit.
-# You can monitor the deletion progress in the Azure Portal.
 
 # --- Final Summary ---
 echo ""
-echo -e "${GREEN}=== Teardown Initiated! ===${NC}"
-echo "Resource group deletion has been initiated in the background."
-echo "Please monitor the Azure Portal to confirm when the resource groups are fully deleted before running setup again."
-log_success "Azure teardown initiated."
+echo -e "${GREEN}=== Teardown Complete! ===${NC}"
+echo "All Voters project Azure resource groups have been successfully destroyed."
+log_success "Azure teardown completed."
