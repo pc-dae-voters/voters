@@ -108,20 +108,47 @@ log_success "Using Azure credentials for teardown."
 # or soft-deleted resources (like Key Vault secrets), we will take a multi-step approach.
 
 KEY_VAULT_NAME="voters-key-vault-unique"
-SECRET_NAME="pc-dae-voters-db-password"
+SECRET_NAME_PREFIX="pc-dae-voters-db-password-"
 RESOURCE_GROUP_NAME="pc-dae-voters-rg"
 TFSTATE_RESOURCE_GROUP_NAME="pc-dae-voters-tfstate"
 
-log_step "Purging Key Vault secrets to prevent conflicts"
-# Check if the vault exists before trying to purge
-if az keyvault show --name "${KEY_VAULT_NAME}" &>/dev/null; then
-    echo "Key Vault '${KEY_VAULT_NAME}' found. Purging secret '${SECRET_NAME}'..."
-    # This command will fail if the secret doesn't exist, which is fine.
-    az keyvault secret purge --vault-name "${KEY_VAULT_NAME}" --name "${SECRET_NAME}" || true
-    log_success "Key Vault secret purge command issued."
+log_step "Deleting and purging Key Vault secrets to prevent conflicts"
+# We must delete secrets before the resource group is deleted to avoid them being soft-deleted
+# and causing conflicts on the next run.
+
+# First, check if the main resource group exists.
+if az group show --name "${RESOURCE_GROUP_NAME}" &>/dev/null; then
+    # Then, check if the vault exists within that group before trying to purge
+    if az keyvault show --name "${KEY_VAULT_NAME}" --resource-group "${RESOURCE_GROUP_NAME}" &>/dev/null; then
+        echo "Key Vault '${KEY_VAULT_NAME}' found. Searching for secrets to delete and purge..."
+
+        # List secrets, filter by prefix, and get their names. The query returns a space-separated string.
+        SECRET_NAMES=$(az keyvault secret list --vault-name "${KEY_VAULT_NAME}" --query "[?starts_with(name, '${SECRET_NAME_PREFIX}')].name" -o tsv)
+
+        if [[ -n "$SECRET_NAMES" ]]; then
+            for SECRET_NAME in $SECRET_NAMES; do
+                echo "--> Deleting secret '${SECRET_NAME}'..."
+                # This moves the secret to a soft-deleted state.
+                az keyvault secret delete --vault-name "${KEY_VAULT_NAME}" --name "${SECRET_NAME}" >/dev/null || echo "    Secret '${SECRET_NAME}' already deleted or does not exist."
+
+                # Wait a moment for the soft-delete to register
+                sleep 5
+
+                echo "--> Purging secret '${SECRET_NAME}'..."
+                # This permanently deletes the secret.
+                az keyvault secret purge --vault-name "${KEY_VAULT_NAME}" --name "${SECRET_NAME}" >/dev/null || echo "    Secret '${SECRET_NAME}' could not be purged (may already be purged)."
+            done
+            log_success "All Key Vault secrets with prefix '${SECRET_NAME_PREFIX}' have been processed."
+        else
+            log_warning "No secrets with prefix '${SECRET_NAME_PREFIX}' found in Key Vault '${KEY_VAULT_NAME}'."
+        fi
+    else
+        log_warning "Key Vault '${KEY_VAULT_NAME}' not found in resource group '${RESOURCE_GROUP_NAME}'. Skipping secret management."
+    fi
 else
-    log_warning "Key Vault '${KEY_VAULT_NAME}' not found. Skipping secret purge."
+    log_warning "Resource group '${RESOURCE_GROUP_NAME}' not found. Skipping secret management."
 fi
+
 
 log_step "Deleting main resource group: ${RESOURCE_GROUP_NAME}"
 if az group show --name "${RESOURCE_GROUP_NAME}" &>/dev/null; then
