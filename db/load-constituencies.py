@@ -95,9 +95,15 @@ def load_data_from_csv(conn, table_name, csv_file_path):
                         else:
                             skipped_count += 1
                             
+                    except psycopg2.Error as db_e:
+                        print(f"Database error on row {row_num}: {db_e}", file=sys.stderr)
+                        error_count += 1
+                        conn.rollback()
+                        continue
                     except Exception as e:
                         print(f"Error processing row {row_num}: {e}", file=sys.stderr)
                         error_count += 1
+                        conn.rollback()
                         continue
 
                 conn.commit()
