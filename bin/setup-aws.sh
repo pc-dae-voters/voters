@@ -171,12 +171,18 @@ log_success "Scripts updated successfully"
 if [[ "$SKIP_DATA_LOAD" == "false" ]]; then
     log_step "Step 7: Recreating database tables"
     echo "Running create-tables.sh on the manager instance to ensure schema is up to date..."
-    ./bin/mgr-ssh.sh 'cd /home/ec2-user/pc-dae-voters && ./bin/create-tables.sh --delete'
+    if ! ./bin/mgr-ssh.sh 'cd /home/ec2-user/pc-dae-voters && ./bin/create-tables.sh --delete'; then
+        log_error "Failed to create/recreate database tables. Aborting."
+        exit 1
+    fi
     log_success "Database tables recreated successfully"
 
     log_step "Step 7: Loading Data into Database"
     echo "Running data loading scripts on the manager instance..."
-    ./bin/mgr-ssh.sh 'cd /home/ec2-user/pc-dae-voters && ./bin/load-data.sh'
+    if ! ./bin/mgr-ssh.sh 'cd /home/ec2-user/pc-dae-voters && ./bin/load-data.sh'; then
+        log_error "Data loading failed. Check logs from the manager instance above. Aborting."
+        exit 1
+    fi
     log_success "Data loaded into database successfully"
 else
     log_warning "Skipping data load (--skip-data-load specified)"
