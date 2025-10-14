@@ -11,11 +11,13 @@ LUN=10
 DATA_DISK=""
 for i in {1..30}; do
     for disk_path in /sys/class/scsi_disk/*; do
-        # We must use a subshell here, there is no other way
-        if (($(cat "$disk_path/device/lun") == "$LUN")); then
-            # This is the most reliable way to get the block device name
-            DATA_DISK="/dev/$(ls "$disk_path/device/block/")"
-            echo ">>> Found disk with LUN $LUN at $DATA_DISK"
+        if [ "$$(cat $$disk_path/device/lun)" -eq "$LUN" ]; then
+            # Use a simple, portable for loop to get the block device name
+            for block_dev in $$disk_path/device/block/*; do
+                DATA_DISK="/dev/$$(basename $$block_dev)"
+                break
+            done
+            echo ">>> Found disk with LUN $LUN at $$DATA_DISK"
             break 2
         fi
     done

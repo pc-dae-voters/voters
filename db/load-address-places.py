@@ -146,6 +146,89 @@ def load_not_specified_places(conn, places_table_name, all_countries, cursor):
     print(f"Finished loading 'not specified' places. Inserted: {inserted_ns}, Skipped (duplicates): {skipped_ns}, Errors: {errors_ns}")
     return inserted_ns, skipped_ns, errors_ns
 
+def load_uk_places_from_addresses_folder(conn, folder_path, file_pattern, address_column, country_id):
+    """
+    Scans a folder for address CSV files, extracts unique place names, and inserts them into the 'places' table for the UK.
+    """
+    total_inserted = 0
+    total_skipped = 0
+    total_errors = 0
+    total_warnings = 0
+    files_with_errors = 0
+    total_rows_processed = 0
+
+    csv_files = glob.glob(os.path.join(folder_path, file_pattern))
+    if not csv_files:
+        print(f"No address files found in '{folder_path}' matching pattern '{file_pattern}'. UK place extraction will be skipped.", file=sys.stderr)
+        return total_inserted, total_skipped, total_errors, total_warnings, 0, 0, 0
+
+    print(f"Found {len(csv_files)} address files to process for UK places in folder '{folder_path}' with pattern '{file_pattern}'.")
+    with conn.cursor() as cursor:
+        insert_sql = f"INSERT INTO places (name, country_id) VALUES (%s, %s) ON CONFLICT (name, country_id) DO NOTHING;"
+        for csv_file_path in csv_files:
+            print(f"Processing UK places from file: {csv_file_path}...")
+            inserted_in_file = 0
+            skipped_in_file = 0
+            errors_in_file = 0
+            warnings_in_file = 0
+            rows_in_file = 0
+
+            try:
+                with open(csv_file_path, mode='r', encoding='utf-8') as csv_file:
+                    reader = csv.DictReader(csv_file)
+                    if address_column not in reader.fieldnames:
+                        print(f"Error: Address column '{address_column}' not found in {csv_file_path}. Found: {reader.fieldnames}", file=sys.stderr)
+                        errors_in_file += 1
+                        warnings_in_file += 1 # Treat as a warning for now
+                        continue
+
+                    for row in reader:
+                        rows_in_file += 1
+                        address = row.get(address_column)
+                        if not address:
+                            warnings_in_file += 1
+                            continue
+
+                        parts = [part.strip() for part in address.split(',') if part.strip()]
+                        if len(parts) > 1:
+                            place_name = parts[-1]
+                            try:
+                                cursor.execute(insert_sql, (place_name, country_id))
+                                if cursor.rowcount > 0:
+                                    inserted_in_file += 1
+                                else:
+                                    skipped_in_file += 1
+                            except psycopg2.Error as e:
+                                print(f"DB Error on row {rows_in_file} in {csv_file_path}: {e}", file=sys.stderr)
+                                conn.rollback()
+                                errors_in_file += 1
+                                if errors_in_file > 100:
+                                    print(f"Error limit exceeded in {csv_file_path}. Aborting file.", file=sys.stderr)
+                                    break # Stop processing this file
+                            else:
+                                conn.commit()
+                        else:
+                            warnings_in_file += 1
+
+            except Exception as e:
+                print(f"Error processing file {csv_file_path}: {e}", file=sys.stderr)
+                errors_in_file += 1
+            
+            # After processing each file
+            conn.commit()
+            if errors_in_file > 0:
+                files_with_errors += 1
+            
+            total_inserted += inserted_in_file
+            total_skipped += skipped_in_file
+            total_errors += errors_in_file
+            total_warnings += warnings_in_file
+            total_rows_processed += rows_in_file
+
+            print(f"Finished {csv_file_path}. UK Places - Processed: {rows_in_file}, Inserted: {inserted_in_file}, Skipped: {skipped_in_file}, Warnings: {warnings_in_file}, Errors: {errors_in_file}")
+
+    return total_inserted, total_skipped, total_errors, total_warnings, len(csv_files), files_with_errors, total_rows_processed
+
 def main():
     # DB connection details are now sourced from environment variables.
     parser = argparse.ArgumentParser(description="Extract UK place names from address CSVs and add 'not specified' place entries for all countries into PostgreSQL.")
@@ -172,23 +255,13 @@ def main():
         uk_country_id = get_uk_country_id(conn) # Needed for UK places
         
         # --- Part 1: Process Address CSVs for UK Places ---
-        csv_files = glob.glob(os.path.join(args.input_folder, args.file_pattern))
-        if not csv_files:
-            print(f"No address files found in '{args.input_folder}' matching pattern '{args.file_pattern}'. UK place extraction will be skipped.", file=sys.stderr)
-        else:
-            print(f"Found {len(csv_files)} address files to process for UK places in folder '{args.input_folder}' with pattern '{args.file_pattern}'.")
-            with conn.cursor() as cursor:
-                for csv_file_path in csv_files:
-                    p_rows, i_file, s_file, e_file = load_places_from_address_csv(
-                        conn, args.places_table, csv_file_path, uk_country_id, args.address_column, cursor
-                    )
-                    total_processed_rows_uk += p_rows
-                    total_inserted_uk += i_file
-                    total_skipped_uk += s_file
-                    total_errors_uk_files += e_file 
-                    if e_file > 0:
-                        files_with_errors_uk +=1
-        
+        (
+            uk_inserted, uk_skipped, uk_errors, uk_warnings, 
+            total_files, files_with_errors, total_rows
+        ) = load_uk_places_from_addresses_folder(
+            conn, args.input_folder, args.file_pattern, args.address_column, uk_country_id
+        )
+
         # --- Part 2: Load "not specified" for all countries ---
         all_countries = get_all_countries(conn)
         if all_countries:
@@ -202,23 +275,23 @@ def main():
 
 
         print("\n--- Overall Summary ---")
-        if csv_files:
-            print(f"UK Places from Address CSVs:")
-            print(f"  Total address files processed: {len(csv_files)}")
-            print(f"  Address files with one or more errors: {files_with_errors_uk}")
-            print(f"  Total address rows processed: {total_processed_rows_uk}")
-            print(f"  Total new UK places inserted: {total_inserted_uk}")
-            print(f"  Total UK places skipped (duplicates): {total_skipped_uk}")
-            print(f"  Total UK place row/file processing errors: {total_errors_uk_files}")
-        
-        print(f"'Not Specified' Places for All Countries:")
+        print("UK Places from Address CSVs:")
+        print(f"  Total address files processed: {total_files}")
+        print(f"  Address files with one or more errors: {files_with_errors}")
+        print(f"  Total address rows processed: {total_rows}")
+        print(f"  Total new UK places inserted: {uk_inserted}")
+        print(f"  Total UK places skipped (duplicates): {uk_skipped}")
+        print(f"  Total UK place data warnings (no place found): {uk_warnings}")
+        print(f"  Total UK place row/file processing errors: {uk_errors}")
+
+        print("'Not Specified' Places for All Countries:")
         print(f"  Total 'not specified' places inserted: {total_inserted_ns}")
         print(f"  Total 'not specified' places skipped (duplicates): {total_skipped_ns}")
         print(f"  Total errors during 'not specified' place loading: {total_errors_ns}")
         
-        final_error_count = total_errors_uk_files + total_errors_ns
-        if final_error_count > 0:
-            print(f"\nCompleted with a total of {final_error_count} errors.")
+        total_errors = uk_errors + total_errors_ns
+        if total_errors > 0:
+            print(f"\nCompleted with a total of {total_errors} errors.")
             sys.exit(1)
         else:
             print("\nCompleted successfully.")
