@@ -171,12 +171,12 @@ log_success "Scripts updated successfully"
 if [[ "$SKIP_DATA_LOAD" == "false" ]]; then
     log_step "Step 7: Recreating database tables"
     echo "Running create-tables.sh on the manager instance to ensure schema is up to date..."
-    ./bin/mgr-ssh.sh '/home/ec2-user/pc-dae-voters/bin/create-tables.sh'
+    ./bin/mgr-ssh.sh 'cd /home/ec2-user/pc-dae-voters && ./bin/create-tables.sh'
     log_success "Database tables recreated successfully"
 
     log_step "Step 7: Loading Data into Database"
     echo "Running data loading scripts on the manager instance..."
-    ./bin/mgr-ssh.sh '/home/ec2-user/pc-dae-voters/bin/load-data.sh'
+    ./bin/mgr-ssh.sh 'cd /home/ec2-user/pc-dae-voters && ./bin/load-data.sh'
     log_success "Data loaded into database successfully"
 else
     log_warning "Skipping data load (--skip-data-load specified)"
