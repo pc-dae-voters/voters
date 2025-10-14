@@ -60,7 +60,8 @@ for i in {1..30}; do
     for disk_path in /sys/class/scsi_disk/*; do
         if [ "$$(cat $$disk_path/device/lun)" -eq "$LUN" ]; then
             DEVICE_NAME=$$(basename $$disk_path)
-            DATA_DISK="/dev/$$(ls /sys/class/scsi_disk/$$DEVICE_NAME/device/block/)"
+            # Use a simple glob to get the block device name, avoiding ls
+            DATA_DISK="/dev/$$(basename $$(ls -d $$disk_path/device/block/* | head -n 1))"
             echo ">>> Found disk with LUN $LUN at $$DATA_DISK"
             break 2
         fi
