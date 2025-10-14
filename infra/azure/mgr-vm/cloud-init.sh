@@ -56,20 +56,15 @@ LUN=10
 DATA_DISK=""
 echo ">>> Waiting for data disk with LUN $LUN to appear..."
 for i in {1..30}; do
-    ls /sys/class/scsi_disk/ | while read -r disk; do
-        if [ "$$(cat /sys/class/scsi_disk/$$disk/device/lun)" -eq "$LUN" ]; then
-            DEVICE_NAME=$$(ls /sys/class/scsi_disk/$$disk/device/block/)
-            DATA_DISK="/dev/$$DEVICE_NAME"
+    # Use a glob pattern for maximum portability, avoiding command substitution
+    for disk_path in /sys/class/scsi_disk/*; do
+        if [ "$$(cat $$disk_path/device/lun)" -eq "$LUN" ]; then
+            DEVICE_NAME=$$(basename $$disk_path)
+            DATA_DISK="/dev/$$(ls /sys/class/scsi_disk/$$DEVICE_NAME/device/block/)"
             echo ">>> Found disk with LUN $LUN at $$DATA_DISK"
-            # Use a temporary file to signal success to the outer loop
-            touch /tmp/disk_found
-            break
+            break 2
         fi
     done
-    if [ -f /tmp/disk_found ]; then
-        rm /tmp/disk_found
-        break
-    fi
     sleep 5
 done
 
