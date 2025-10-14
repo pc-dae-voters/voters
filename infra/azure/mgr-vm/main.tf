@@ -52,9 +52,8 @@ resource "azurerm_linux_virtual_machine" "manager" {
     public_key = tls_private_key.manager_key.public_key_openssh
   }
 
-  custom_data = base64encode(templatefile("${path.module}/cloud-init-multipart.tftpl", {
-    cloud_init_sh = file("${path.module}/cloud-init.sh")
-    post_init_sh  = file("${path.module}/post-init.sh")
+  custom_data = base64encode(templatefile("${path.module}/cloud-init.sh", {
+    post_init_sh = file("${path.module}/post-init.sh")
   }))
 
   os_disk {
