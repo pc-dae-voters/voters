@@ -171,7 +171,7 @@ log_success "Scripts updated successfully"
 if [[ "$SKIP_DATA_LOAD" == "false" ]]; then
     log_step "Step 7: Recreating database tables"
     echo "Running create-tables.sh on the manager instance to ensure schema is up to date..."
-    ./bin/mgr-ssh.sh 'cd /home/ec2-user/pc-dae-voters && ./bin/create-tables.sh'
+    ./bin/mgr-ssh.sh 'cd /home/ec2-user/pc-dae-voters && ./bin/create-tables.sh --delete'
     log_success "Database tables recreated successfully"
 
     log_step "Step 7: Loading Data into Database"
