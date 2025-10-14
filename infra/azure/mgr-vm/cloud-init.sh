@@ -1,3 +1,8 @@
+#cloud-config
+# The runcmd module ensures commands are run late in the boot process, after networking is up.
+runcmd:
+  - apt-get update
+
 #!/bin/bash
 # This script is executed by cloud-init on the manager VM at first boot.
 # It installs all necessary software, configures the environment, and starts the manager service.
@@ -11,13 +16,13 @@ set -ex
 echo ">>> Starting cloud-init script. Version: ${version}"
 
 # --- Initial Setup & Prerequisites ---
-echo ">>> Updating apt and installing prerequisites..."
+echo ">>> Installing prerequisites..."
+# apt-get update is now handled by the runcmd module above to ensure network is ready.
 for i in {1..5}; do
-  apt-get update && break
-  echo "apt-get update failed (attempt $i of 5), retrying in 5 seconds..."
+  DEBIAN_FRONTEND=noninteractive apt-get install -y apt-transport-https ca-certificates curl software-properties-common jq git xfsprogs parted && break
+  echo "apt-get install failed (attempt $i of 5), retrying in 5 seconds..."
   sleep 5
 done
-DEBIAN_FRONTEND=noninteractive apt-get install -y apt-transport-https ca-certificates curl software-properties-common jq git xfsprogs parted
 
 # --- Set Environment Variables ---
 echo ">>> Setting environment variables..."
