@@ -62,14 +62,32 @@ resource "azurerm_linux_virtual_machine" "manager" {
     version   = "latest"
   }
 
-  custom_data = base64encode(templatefile("${path.module}/cloud-init.sh", {
-    db_host           = var.db_host
-    db_name           = var.db_name
-    db_username       = var.db_username
-    db_password       = var.db_password
-    version           = var.cloud_init_version
-    terraform_version = var.terraform_version
-  }))
+  data "template_file" "cloud_init_combined" {
+    template = <<-EOT
+      Content-Type: multipart/mixed; boundary="//"
+      MIME-Version: 1.0
+
+      --//
+      Content-Type: text/x-shellscript; charset="us-ascii"
+      MIME-Version: 1.0
+      Content-Transfer-Encoding: 7bit
+      Content-Disposition: attachment; filename="cloud-init.sh"
+
+      ${file("${path.module}/cloud-init.sh")}
+
+      --//
+      Content-Type: text/x-shellscript; charset="us-ascii"
+      MIME-Version: 1.0
+      Content-Transfer-Encoding: 7bit
+      Content-Disposition: attachment; filename="post-init.sh"
+
+      ${file("${path.module}/post-init.sh")}
+
+      --//
+    EOT
+  }
+
+  custom_data = data.template_file.cloud_init_combined.rendered
 
   tags = var.tags
 }
