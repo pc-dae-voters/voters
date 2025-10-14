@@ -30,14 +30,33 @@ activate_venv() {
     source "${VENV_DIR}/bin/activate"
 }
 
+# --- Configuration ---
+DATA_DIR="/data"
+CONSTITUENCIES_CSV="${DATA_DIR}/parl_constituencies_2025.csv"
+CON_POSTCODES_CSV="${DATA_DIR}/postcodes_with_con.csv"
+ADDRESSES_FOLDER="${DATA_DIR}/addresses"
+NAMES_FOLDER="${DATA_DIR}/names/data"
+NUM_PEOPLE=10000
+RANDOM_SEED=12345
+
+echo "Loading data into database..."
+echo "Using configuration:"
+echo "  Constituencies CSV: ${CONSTITUENCIES_CSV}"
+echo "  Constituency Postcodes CSV: ${CON_POSTCODES_CSV}"
+echo "  Addresses Folder: ${ADDRESSES_FOLDER}"
+echo "  Names Folder: ${NAMES_FOLDER}"
+echo "  Number of People: ${NUM_PEOPLE}"
+echo "  Random Seed: ${RANDOM_SEED}"
+
 activate_venv
 echo "Installing dependencies..."
 pip3 install -r "$SCRIPT_DIR/../db/requirements.txt"
 
 function run_python_loader() {
     local loader_script=$1
+    shift # remove the script name from the arguments list
     echo "--- Running $loader_script ---"
-    if ! python3 "$SCRIPT_DIR/../db/$loader_script"; then
+    if ! python3 "$SCRIPT_DIR/../db/$loader_script" "$@"; then
         echo "Error: $loader_script failed. Aborting." >&2
         exit 1
     fi
@@ -45,14 +64,14 @@ function run_python_loader() {
 
 echo "Starting data loading process..."
 
-run_python_loader "load-constituencies.py"
-run_python_loader "load-con-postcodes.py"
-run_python_loader "load-names-from-csv.py"
-run_python_loader "get-uk-places.py"
-run_python_loader "load-places.py"
-run_python_loader "load-addresses.py"
+run_python_loader "load-constituencies.py" --csv-file "$CONSTITUENCIES_CSV"
+run_python_loader "load-con-postcodes.py" --csv-file "$CON_POSTCODES_CSV"
+run_python_loader "load-names-from-csv.py" --folder-path "$NAMES_FOLDER"
+run_python_loader "get-uk-places.py" --folder-path "$ADDRESSES_FOLDER"
+run_python_loader "load-places.py" --folder-path "$ADDRESSES_FOLDER"
+run_python_loader "load-addresses.py" --folder-path "$ADDRESSES_FOLDER"
 run_python_loader "load-address-places.py"
-run_python_loader "load-synthetic-people.py"
+run_python_loader "load-synthetic-people.py" --num-people "$NUM_PEOPLE" --random-seed "$RANDOM_SEED"
 run_python_loader "load-voters.py"
 
 echo "Data loading process completed successfully." 
