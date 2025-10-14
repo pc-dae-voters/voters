@@ -1,10 +1,21 @@
 #!/bin/bash
+# This script is executed by cloud-init on the manager VM at first boot.
+# It installs all necessary software, configures the environment, and starts the manager service.
 
-# Cloud-init script for Voters Manager Azure VM
-# This script installs all necessary software and configures the environment
-# Version: ${version}
-
+# Exit immediately if a command exits with a non-zero status.
 set -e
+
+# --- Initial Setup ---
+# Update package lists and install prerequisite software
+apt-get update
+apt-get install -y apt-transport-https ca-certificates curl software-properties-common jq git xfsprogs parted
+
+# --- Set Environment Variables ---
+# These are templated in by Terraform
+export DB_HOST="${db_host}"
+export DB_NAME="${db_name}"
+export DB_USERNAME="${db_username}"
+export DB_PASSWORD="${db_password}"
 
 # --- Mount Data Disk ---
 mount_data_disk() {

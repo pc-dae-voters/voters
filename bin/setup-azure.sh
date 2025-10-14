@@ -127,11 +127,15 @@ echo "Creating Azure Storage Account for Terraform state..."
 ./bin/do-terraform.sh --path infra/azure/tf-state
 log_success "Terraform state backend created successfully"
 
-# Step 2: Create Core Infrastructure
 log_step "Step 2: Creating All Azure Infrastructure"
 echo "Creating VNet, Database, Data Volume, Manager VM, and AKS Cluster..."
-./bin/do-terraform.sh --path infra/azure
+# Pass a unique version to the cloud-init script to force re-provisioning on change
+CLOUD_INIT_VERSION=$(date +%s)
+./bin/do-terraform.sh --path infra/azure -var "cloud_init_version=$CLOUD_INIT_VERSION"
 log_success "All Azure infrastructure created successfully"
+
+# The rest of the script (data upload, etc.) will run after this,
+# but we run them separately in case the user wants to skip them.
 
 # Step 3: Upload Data (optional)
 if [[ "$SKIP_DATA_UPLOAD" == "false" ]]; then
