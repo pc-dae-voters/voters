@@ -56,8 +56,9 @@ function run_python_loader() {
     local loader_script=$1
     shift # remove the script name from the arguments list
     echo "--- Running $loader_script ---"
-    if ! python3 "$SCRIPT_DIR/../db/$loader_script" "$@"; then
-        echo "Error: $loader_script failed. Aborting." >&2
+    python3 "$SCRIPT_DIR/../db/$loader_script" "$@"
+    if [ $? -ne 0 ]; then
+        echo "Error: $loader_script failed. Aborting."
         exit 1
     fi
 }
@@ -65,15 +66,11 @@ function run_python_loader() {
 echo "Starting data loading process..."
 
 run_python_loader "load-constituencies.py" --csv-file "$CONSTITUENCIES_CSV"
-run_python_loader "$SCRIPT_DIR/../db/load-con-postcodes.py" --csv-file "$CON_POSTCODES_CSV"
-
-# Corrected argument from --folder-path to --names-data-folder
-run_python_loader "$SCRIPT_DIR/../db/load-names-from-csv.py" --names-data-folder "$NAMES_FOLDER" --random-seed "$RANDOM_SEED"
-
-run_python_loader "$SCRIPT_DIR/../db/get-uk-places.py" --folder-path "$ADDRESSES_FOLDER"
-run_python_loader "load-places.py" --folder-path "$ADDRESSES_FOLDER"
-run_python_loader "load-addresses.py" --folder-path "$ADDRESSES_FOLDER"
+run_python_loader "load-con-postcodes.py" --csv-file "$CON_POSTCODES_CSV"
+run_python_loader "load-names-from-csv.py" --names-data-folder "$NAMES_FOLDER" --random-seed "$RANDOM_SEED"
+run_python_loader "get-uk-places.py"
 run_python_loader "load-address-places.py" --input-folder "$ADDRESSES_FOLDER"
+run_python_loader "load-addresses.py" --input-folder "$ADDRESSES_FOLDER"
 run_python_loader "load-synthetic-people.py" --num-people "$NUM_PEOPLE" --random-seed "$RANDOM_SEED"
 run_python_loader "load-voters.py"
 
