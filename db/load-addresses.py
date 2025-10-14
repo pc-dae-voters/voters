@@ -84,6 +84,7 @@ def main():
     total_skipped_place_not_found = 0
     total_skipped_duplicate = 0
     total_errors = 0
+    total_warnings = 0
     files_processed_count = 0
 
     try:
@@ -105,6 +106,7 @@ def main():
                 skipped_place_in_file = 0
                 skipped_dup_in_file = 0
                 errors_in_file = 0
+                warnings_in_file = 0
                 
                 try:
                     with open(csv_file_path, 'r', encoding='utf-8-sig') as file:
@@ -129,11 +131,8 @@ def main():
                             normalized_postcode = normalize_postcode(csv_postcode)
 
                             if not street_address or not place_name_from_csv or not normalized_postcode:
-                                print(f"Warning: Row {row_num} in {csv_file_path}: Insufficient data from address ('{street_address}'), place ('{place_name_from_csv}') or postcode ('{normalized_postcode}'). Skipping.", file=sys.stderr)
-                                errors_in_file += 1
-                                if total_errors + errors_in_file > 100:
-                                    print("Error limit exceeded. Aborting.", file=sys.stderr)
-                                    sys.exit(1)
+                                print(f"Warning: Row {row_num} in {csv_file_path}: Insufficient data. Skipping.", file=sys.stderr)
+                                warnings_in_file += 1
                                 continue
 
                             place_id = get_place_id(conn, place_name_from_csv, target_country_id, cursor)
@@ -177,7 +176,8 @@ def main():
                 total_skipped_place_not_found += skipped_place_in_file
                 total_skipped_duplicate += skipped_dup_in_file
                 total_errors += errors_in_file
-                print(f"Finished {csv_file_path}. Rows: {rows_in_file}, Inserted: {inserted_in_file}, Skipped (Place NF): {skipped_place_in_file}, Skipped (Dup): {skipped_dup_in_file}, Errors: {errors_in_file}")
+                total_warnings += warnings_in_file
+                print(f"Finished {csv_file_path}. Rows: {rows_in_file}, Inserted: {inserted_in_file}, Skipped (Place NF): {skipped_place_in_file}, Skipped (Dup): {skipped_dup_in_file}, Errors: {errors_in_file}, Warnings: {warnings_in_file}")
 
         print("\n--- Overall Summary ---")
         print(f"Total files processed: {files_processed_count}")
@@ -186,6 +186,7 @@ def main():
         print(f"Total addresses skipped (place not found): {total_skipped_place_not_found}")
         print(f"Total addresses skipped (duplicate): {total_skipped_duplicate}")
         print(f"Total row/file processing errors: {total_errors}")
+        print(f"Total row/file processing warnings: {total_warnings}")
         
         if total_errors > 0:
             print("Completed with errors.")
