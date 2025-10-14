@@ -24,15 +24,14 @@ def get_db_connection():
         print(f"Error: Database connection failed: {e}")
         raise
 
-def load_names_to_table(conn, table_name, names_to_load, cursor):
+def load_names_to_table(conn, names_list, table_name, cursor):
+    """Loads a list of names into the specified table."""
+    sql = f"INSERT INTO \"{table_name}\" (name) VALUES (%s) ON CONFLICT (name) DO NOTHING;"
     inserted_count = 0
     skipped_count = 0
     error_count = 0
     
-    sql = f"INSERT INTO {table_name} (name) VALUES (%s) ON CONFLICT (name) DO NOTHING;"
-    for name in names_to_load:
-        if not name: # Skip empty names
-            continue
+    for name in names_list:
         try:
             cursor.execute(sql, (name,))
             if cursor.rowcount > 0:
@@ -41,39 +40,40 @@ def load_names_to_table(conn, table_name, names_to_load, cursor):
                 skipped_count += 1
         except psycopg2.Error as e:
             print(f"DB Error inserting name '{name}' into {table_name}: {e}", file=sys.stderr)
-            conn.rollback() # Rollback this insert, but continue with others
+            conn.rollback() 
             error_count += 1
             if error_count > 100:
                 print(f"Error limit exceeded for table {table_name}. Aborting.", file=sys.stderr)
-                return inserted_count, skipped_count, error_count # Return current counts
+                return inserted_count, skipped_count, error_count
         else:
-            conn.commit() # Commit successful insert or skip
+            conn.commit()
     return inserted_count, skipped_count, error_count
 
 def load_first_names_with_gender_to_table(conn, first_names_data, cursor):
     """Loads first names with gender to the first_names table."""
+    sql = "UPDATE first_names SET gender = %s WHERE name = %s AND gender IS NULL;"
+    updated_count = 0
     error_count = 0
     
-    sql = "INSERT INTO first_names (name, gender) VALUES (%s, %s) ON CONFLICT (name) DO NOTHING;"
-    for name, gender in first_names_data:
-        if not name: # Skip empty names
-            continue
+    for item in first_names_data:
         try:
-            cursor.execute(sql, (name, gender))
-            if cursor.rowcount > 0:
-                inserted_count += 1
-            else:
-                skipped_count += 1
+            name = item['name']
+            gender = item['gender']
+            if gender in ['M', 'F']:
+                cursor.execute(sql, (gender, name))
+                if cursor.rowcount > 0:
+                    updated_count += 1
         except psycopg2.Error as e:
-            print(f"DB Error inserting name '{name}' (gender: {gender}) into first-names: {e}", file=sys.stderr)
-            conn.rollback() # Rollback this insert, but continue with others
+            print(f"DB Error updating gender for name '{name}': {e}", file=sys.stderr)
+            conn.rollback()
             error_count += 1
             if error_count > 100:
                 print(f"Error limit exceeded for table first_names with gender. Aborting.", file=sys.stderr)
-                return error_count
+                return updated_count, error_count
         else:
-            conn.commit() # Commit successful insert or skip
-    return error_count
+            conn.commit()
+    print(f"Updated gender for {updated_count} first names.")
+    return updated_count, error_count
 
 def main():
     """Main function to load names."""
@@ -90,7 +90,6 @@ def main():
     if args.random_seed is not None:
         random.seed(args.random_seed)
 
-    conn = get_db_connection()
     unique_first_names_data = {} # Changed from set to dict
     unique_surnames = set()
     files_processed_count = 0
@@ -151,38 +150,39 @@ def main():
         print(f"Unique first names collected: {len(unique_first_names_data)}")
         print(f"Unique surnames collected: {len(unique_surnames)}")
 
-        with conn.cursor() as cursor:
-            print("\nLoading first names into 'first-names' table...")
-            # Convert dict to list of tuples for the new function
-            first_names_list_with_gender = sorted(list(unique_first_names_data.items()))
-            fn_inserted, fn_skipped, fn_errors = load_first_names_with_gender_to_table(conn, first_names_list_with_gender, cursor)
-            print(f"First names - Inserted: {fn_inserted}, Skipped (duplicates): {fn_skipped}, Errors: {fn_errors}")
+        # Convert dict to list of tuples for the new function
+        first_names = [{"name": name, "gender": gender} for name, gender in unique_first_names_data.items()]
+        surnames = sorted(list(unique_surnames))
 
-            print("\nLoading surnames into 'surnames' table...")
-            sn_inserted, sn_skipped, sn_errors = load_names_to_table(conn, "surnames", sorted(list(unique_surnames)), cursor)
-            print(f"Surnames - Inserted: {sn_inserted}, Skipped (duplicates): {sn_skipped}, Errors: {sn_errors}")
-
-        total_errors = fn_errors + sn_errors
-        if total_errors > 0:
-            print(f"\nCompleted with {total_errors} database errors during loading.")
-            sys.exit(1)
-        else:
-            print("\nName loading completed successfully.")
-
-        print("Warning: No male-specific first names found in 'first-names' table.", file=sys.stderr)
-        print("Warning: No female-specific first names found in 'first-names' table.", file=sys.stderr)
-        print("Warning: No neutral/unspecified-gender first names found in 'first-names' table.", file=sys.stderr)
-
-    except psycopg2.Error as e:
-        print(f"A critical PostgreSQL error occurred: {e}", file=sys.stderr)
-        if conn: conn.rollback()
-        sys.exit(1)
     except Exception as e:
-        print(f"An unexpected critical error occurred: {e}", file=sys.stderr)
-        if conn: conn.rollback()
+        print(f"An unexpected critical error occurred during name collection: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    conn = get_db_connection()
+    if not conn:
+        sys.exit(1)
+
+    try:
+        with conn.cursor() as cursor:
+            # Load first names and surnames
+            inserted_count_fn, skipped_count_fn, first_name_errors = load_names_to_table(conn, [d['name'] for d in first_names], 'first_names', cursor)
+            print(f"Loaded {inserted_count_fn} first names, skipped {skipped_count_fn} duplicates.")
+
+            inserted_count_sn, skipped_count_sn, surname_errors = load_names_to_table(conn, surnames, 'surnames', cursor)
+            print(f"Loaded {inserted_count_sn} surnames, skipped {skipped_count_sn} duplicates.")
+            
+            # Load first names with gender
+            _, gender_errors = load_first_names_with_gender_to_table(conn, first_names, cursor)
+
+            if first_name_errors >= 100 or surname_errors >= 100 or gender_errors >= 100:
+                print("Data loading process aborted due to excessive errors.", file=sys.stderr)
+                sys.exit(1)
+
+    except Exception as e:
+        print(f"An unexpected error occurred in main: {e}", file=sys.stderr)
         sys.exit(1)
     finally:
-        if conn and not conn.closed:
+        if conn:
             conn.close()
 
 if __name__ == "__main__":
