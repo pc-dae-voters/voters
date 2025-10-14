@@ -26,7 +26,7 @@ def load_data_from_csv(conn, table_name, csv_file_path):
     """Loads data from a CSV file into the con-postcodes table."""
     csv_postcode_col = 'postcode' 
     csv_con_code_col = 'short_code'
-    insert_sql = f"INSERT INTO {table_name} (postcode, con_code) VALUES (%s, %s) ON CONFLICT (postcode) DO UPDATE SET con_code = EXCLUDED.con_code;"
+    insert_sql = f'INSERT INTO "{table_name}" (postcode, con_code) VALUES (%s, %s) ON CONFLICT (postcode) DO UPDATE SET con_code = EXCLUDED.con_code;'
     
     successful_ops_count = 0
     error_count = 0
@@ -50,7 +50,6 @@ def load_data_from_csv(conn, table_name, csv_file_path):
                         if error_count > 100:
                             print("Error limit exceeded. Aborting.", file=sys.stderr)
                             return False
-                        continue
                     
                     try:
                         normalized_postcode = postcode.upper().replace(" ", "")
