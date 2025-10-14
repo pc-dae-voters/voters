@@ -682,3 +682,75 @@ The application provides a complete REST API for managing the voter data infrast
 
 **Files Modified:**
 - [`./bin/setup-aws.sh`](../../bin/setup-aws.sh) - Added the `--delete` flag to the `create-tables.sh` remote execution.
+
+---
+
+## Session 50: 2025-10-14 - Fix SQL Syntax for Table Deletion
+
+**User Request:** failed again
+
+**Response:** Fixed a SQL syntax error in the `create-tables.sh` script that was causing the database setup to fail. The script was not correctly quoting table names that contained hyphens (like `con-postcodes`), which is invalid syntax. The script has been updated to enclose all table names in double quotes when generating the `DROP TABLE` command, making it compatible with all table names.
+
+**Files Modified:**
+- [`./bin/create-tables.sh`](../../bin/create-tables.sh) - Added double quotes around table names in the `DROP TABLE` command.
+
+---
+
+## Session 51: 2025-10-14 - Add Detailed Error Logging to Data Loader
+
+**User Request:** failed
+
+**Response:** To finally diagnose the persistent `current transaction is aborted` error, the `load-constituencies.py` script has been modified to provide much more detailed error logging. It will now catch the specific `psycopg2.Error`, print the exact database error message to the console, and then roll back the failed transaction. This will allow us to see the underlying data or schema issue that is causing the `INSERT` to fail, and will prevent one bad row from stopping the entire script.
+
+**Files Modified:**
+- [`./db/load-constituencies.py`](../../db/load-constituencies.py) - Added specific exception handling for `psycopg2.Error` to log detailed database errors.
+
+---
+
+## Session 52: 2025-10-14 - Fix Data Type Mismatch in Constituencies Table
+
+**User Request:** (implied)
+
+**Response:** After adding detailed error logging, the root cause of the data loading failure was identified as a `value too long for type character varying(10)` error. The `code` column in the `constituencies` table was too small to hold the data from the CSV file. The schema has been updated to increase the column size to `VARCHAR(255)`, which will permanently resolve this data type mismatch.
+
+**Files Modified:**
+- [`./db/constituencies.sql`](../../db/constituencies.sql) - Increased the size of the `code` column to `VARCHAR(255)`.
+
+---
+
+## Session 53: 2025-10-14 - Add Error Limits to Data Loaders
+
+**User Request:** failing again, let's also fix loader scripts to terminate after a more than 100 errors
+
+**Response:** Implemented a new error-handling policy across all data loading and generation scripts to prevent excessive runtime on failing scripts. All relevant Python scripts have been updated to track the number of errors encountered during processing. If the error count exceeds 100, the script will now abort, providing faster feedback on systemic data or schema issues. Additionally, several latent bugs in the loader scripts, such as incorrect table names in SQL queries, were fixed.
+
+**Files Modified:**
+- [`./db/load-constituencies.py`](../../db/load-constituencies.py) - Added error limit.
+- [`./db/load-con-postcodes.py`](../../db/load-con-postcodes.py) - Added error limit.
+- [`./db/load-addresses.py`](../../db/load-addresses.py) - Added error limit.
+- [`./db/load-names-from-csv.py`](../../db/load-names-from-csv.py) - Added error limit and fixed table name.
+- [`./db/load-synthetic-people.py`](../../db/load-synthetic-people.py) - Fixed table names.
+- [`./db/load-voters.py`](../../db/load-voters.py) - Added error limit.
+
+---
+
+## Session 54: 2025-10-14 - Final Data Loader Fixes
+
+**User Request:** (implied)
+
+**Response:** Fixed two final errors that were preventing the data loading from succeeding. First, the `load-con-postcodes.py` script was failing with a SQL syntax error because the table name in the `INSERT` statement was not quoted. This has been corrected. Second, the `load-data.sh` script was passing an incorrect argument to the `load-names-from-csv.py` script (`--folder-path` instead of `--names-data-folder`), which has also been fixed.
+
+**Files Modified:**
+- [`./db/load-con-postcodes.py`](../../db/load-con-postcodes.py) - Added quotes to table name in SQL query.
+- [`./bin/load-data.sh`](../../bin/load-data.sh) - Corrected argument name for names loader script.
+
+---
+
+## Session 55: 2025-10-14 - Final Pathing Fix in Data Loader
+
+**User Request:** (implied)
+
+**Response:** Fixed a final pathing error in the `load-data.sh` script. A previous change had incorrectly added the full script path to the execution command, causing a "file not found" error. This has been reverted, and the script now correctly calls the Python loaders by their filename only, allowing the interpreter to find them in the correct directory.
+
+**Files Modified:**
+- [`./bin/load-data.sh`](../../bin/load-data.sh) - Corrected script pathing for Python loader execution.

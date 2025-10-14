@@ -71,10 +71,10 @@ trap 'rm -f "$SSH_KEY_FILE"' EXIT
 terraform -chdir="$TF_MODULE_PATH" output -raw manager_vm_private_ssh_key > "$SSH_KEY_FILE"
 chmod 600 "$SSH_KEY_FILE"
 
-echo "Uploading data from '$DATA_FOLDER' to azureuser@$IP_ADDRESS:/data/"
+echo "Uploading data from '$DATA_FOLDER' to azureuser@$IP_ADDRESS:/mnt/data/uploads/"
 
 # Use rsync to upload the data. Trailing slash on source is important!
 rsync -avz -e "ssh -i $SSH_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
-    "${DATA_FOLDER}/" "azureuser@${IP_ADDRESS}:/data/"
+    "${DATA_FOLDER}/" "azureuser@${IP_ADDRESS}:/mnt/data/uploads/"
 
 echo "Data upload completed successfully!"

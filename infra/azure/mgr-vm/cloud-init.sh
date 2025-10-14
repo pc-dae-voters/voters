@@ -185,6 +185,41 @@ chmod +x /usr/local/bin/voters-setup-delayed.sh
 systemctl enable voters-manager.service
 systemctl start voters-manager.service
 
+# We need to wait for the disk to be attached and available.
+# The disk is attached at LUN 10 as specified in the Terraform config.
+# SCSI devices can be slow to show up, so we'll wait for it.
+DATA_DISK=""
+for i in {1..30}; do
+    if [[ -e /dev/disk/by-id/scsi-0HC_Azure_Serial-voters-data-disk-lun10 ]]; then
+        DATA_DISK="/dev/disk/by-id/scsi-0HC_Azure_Serial-voters-data-disk-lun10"
+        break
+    fi
+    sleep 5
+done
+
+if [[ -z "$DATA_DISK" ]]; then
+    echo "Data disk was not found after 150 seconds. Aborting."
+    exit 1
+fi
+
+# Partition and format the data disk
+parted "$DATA_DISK" --script mklabel gpt mkpart xfspart xfs 0% 100%
+mkfs.xfs -f "$${DATA_DISK}-part1"
+
+# Mount the data disk
+mkdir -p /mnt/data
+mount "$${DATA_DISK}-part1" /mnt/data
+echo "$${DATA_DISK}-part1 /mnt/data xfs defaults,nofail 0 2" >> /etc/fstab
+
+# Create the target directory for data uploads on the mounted disk and set permissions
+mkdir -p /mnt/data/uploads
+chown -R azureuser:azureuser /mnt/data/uploads
+ln -s /mnt/data/uploads /data
+
+# --- Install Docker ---
+# Add Docker's official GPG key:
+install -m 0755 -d /etc/apt/keyrings
+
 echo "Cloud-init completed successfully!"
 echo "If data disk wasn't available, setup will continue via systemd service."
 echo "To check status: systemctl status voters-manager.service"
