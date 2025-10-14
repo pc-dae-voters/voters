@@ -8,8 +8,8 @@ exec > /tmp/cloud-init-bootstrap.log 2>&1
 echo ">>> Starting cloud-init bootstrap..."
 
 # Create the post-init.sh script using a heredoc
-# Note the lack of quotes around EOF, allowing variable expansion
-cat <<EOF > /tmp/post-init.sh
+# Use 'EOF' to prevent local shell expansion
+cat <<'EOF' > /tmp/post-init.sh
 ${post_init_sh}
 EOF
 
