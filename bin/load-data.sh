@@ -36,6 +36,7 @@ CONSTITUENCIES_CSV="${DATA_DIR}/parl_constituencies_2025.csv"
 CON_POSTCODES_CSV="${DATA_DIR}/postcodes_with_con.csv"
 ADDRESSES_FOLDER="${DATA_DIR}/addresses"
 NAMES_FOLDER="${DATA_DIR}/names/data"
+UK_PLACES_CSV="${DATA_DIR}/uk_places.csv"
 NUM_PEOPLE=10000
 RANDOM_SEED=12345
 
@@ -68,7 +69,8 @@ echo "Starting data loading process..."
 run_python_loader "load-constituencies.py" --csv-file "$CONSTITUENCIES_CSV"
 run_python_loader "load-con-postcodes.py" --csv-file "$CON_POSTCODES_CSV"
 run_python_loader "load-names-from-csv.py" --names-data-folder "$NAMES_FOLDER" --random-seed "$RANDOM_SEED"
-run_python_loader "get-uk-places.py"
+run_python_loader "get-uk-places.py" --input-folder "$ADDRESSES_FOLDER" --output-csv "$UK_PLACES_CSV"
+run_python_loader "load-places.py" --csv-file "$UK_PLACES_CSV"
 run_python_loader "load-address-places.py" --input-folder "$ADDRESSES_FOLDER"
 run_python_loader "load-addresses.py" --input-folder "$ADDRESSES_FOLDER"
 run_python_loader "load-synthetic-people.py" --num-people "$NUM_PEOPLE" --random-seed "$RANDOM_SEED"
