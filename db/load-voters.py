@@ -53,13 +53,12 @@ def get_married_couples(conn):
         print(f"Database error fetching married couples: {e}", file=sys.stderr)
         return []
 
-def main():
-    """Main function to load voter data."""
-    parser = argparse.ArgumentParser(description="Load voter records for citizens over 18 years old.")
-    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
-    args = parser.parse_args()
-
-    conn = get_db_connection()
+def create_voters(conn, num_people, random_seed):
+    """
+    Creates voter records for citizens over 18 years old.
+    Returns the total number of errors encountered.
+    """
+    random.seed(random_seed)
     today = datetime.now().date()
 
     try:
@@ -156,6 +155,40 @@ def main():
         print(f"A PostgreSQL error occurred: {e}", file=sys.stderr)
         if conn: conn.rollback()
         sys.exit(1)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}", file=sys.stderr)
+        if conn: conn.rollback()
+        sys.exit(1)
+    finally:
+        if conn and not conn.closed:
+            conn.close()
+
+    print(f"Total voters created: {voters_created}")
+    if error_count > 0:
+        print(f"Total errors: {error_count}")
+    
+    if error_count > 100:
+        print("Error limit exceeded during voter generation. Aborting.", file=sys.stderr)
+    
+    return error_count
+
+def main():
+    """Main function to load voter data."""
+    parser = argparse.ArgumentParser(description="Load voter records for citizens over 18 years old.")
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    args = parser.parse_args()
+
+    try:
+        conn = get_db_connection()
+        if not conn:
+            sys.exit(1)
+            
+        error_count = create_voters(conn, num_people, random_seed)
+        
+        if error_count > 100:
+            print("Voter generation aborted due to excessive errors.", file=sys.stderr)
+            sys.exit(1)
+
     except Exception as e:
         print(f"An unexpected error occurred: {e}", file=sys.stderr)
         if conn: conn.rollback()

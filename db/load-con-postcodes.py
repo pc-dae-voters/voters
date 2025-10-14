@@ -96,15 +96,20 @@ def main():
 
     conn = get_db_connection()
     try:
-        if conn:
-            load_data_from_csv(conn, args.table, args.csv_file)
+        if not conn:
+            sys.exit(1)
+        
+        table_name = "con-postcodes"
+        success = load_data_from_csv(conn, table_name, args.csv_file)
+        if not success:
+            print("Data loading process aborted due to excessive errors.", file=sys.stderr)
+            sys.exit(1)
+
     except Exception as e:
-        print(f"An unexpected error occurred in main: {e}", file=sys.stderr)
-        if conn and not conn.closed:
-            conn.rollback()
+        print(f"An unexpected error occurred: {e}", file=sys.stderr)
         sys.exit(1)
     finally:
-        if conn and not conn.closed:
+        if conn:
             conn.close()
 
 if __name__ == "__main__":

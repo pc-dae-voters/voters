@@ -2,8 +2,8 @@ DROP TABLE IF EXISTS "con-postcodes" CASCADE;
 
 -- Table Definition
 CREATE TABLE IF NOT EXISTS "con-postcodes" (
-    postcode VARCHAR(10) PRIMARY KEY,
-    con_code VARCHAR(10)
+    postcode VARCHAR(15) PRIMARY KEY,
+    con_code VARCHAR(255)
 );
 
 CREATE INDEX idx_con_postcodes_con_code ON "con-postcodes"(con_code);

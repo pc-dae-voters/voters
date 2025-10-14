@@ -140,20 +140,21 @@ def main():
     parser.add_argument("--csv-file", required=True, help="Path to the constituency data CSV file.")
     args = parser.parse_args()
     
-    conn = get_db_connection()
     try:
-        if conn:
-            success = load_data_from_csv(conn, "constituencies", args.csv_file)
-            if not success:
-                sys.exit(1)
-    except psycopg2.Error as e:
-        print(f"A PostgreSQL error occurred: {e}", file=sys.stderr)
-        sys.exit(1)
+        conn = get_db_connection()
+        if not conn:
+            sys.exit(1)
+            
+        success = load_data_from_csv(conn, 'constituencies', args.csv_file)
+        if not success:
+            print("Data loading process aborted due to excessive errors.", file=sys.stderr)
+            sys.exit(1)
+            
     except Exception as e:
-        print(f"An unexpected error occurred in main: {e}", file=sys.stderr)
+        print(f"An unexpected error occurred: {e}", file=sys.stderr)
         sys.exit(1)
     finally:
-        if conn and not conn.closed:
+        if conn:
             conn.close()
 
 if __name__ == "__main__":
