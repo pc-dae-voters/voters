@@ -31,31 +31,37 @@ def load_names_to_table(conn, names_list, table_name, cursor):
     skipped_count = 0
     error_count = 0
     
-    for name in names_list:
+    for i, name in enumerate(names_list, 1):
         try:
             cursor.execute(sql, (name,))
             if cursor.rowcount > 0:
                 inserted_count += 1
             else:
                 skipped_count += 1
+
+            if i % 1000 == 0:
+                conn.commit()
+                print(f"  ... committed {i}/{len(names_list)} records for {table_name}", end='\r')
+
         except psycopg2.Error as e:
-            print(f"DB Error inserting name '{name}' into {table_name}: {e}", file=sys.stderr)
+            print(f"\nDB Error inserting name '{name}' into {table_name}: {e}", file=sys.stderr)
             conn.rollback() 
             error_count += 1
             if error_count > 100:
-                print(f"Error limit exceeded for table {table_name}. Aborting.", file=sys.stderr)
+                print(f"\nError limit exceeded for table {table_name}. Aborting.", file=sys.stderr)
                 return inserted_count, skipped_count, error_count
-        else:
-            conn.commit()
+    
+    conn.commit() # Commit any remaining records
+    print(f"  ... committed {len(names_list)}/{len(names_list)} records for {table_name}. Done.")
     return inserted_count, skipped_count, error_count
 
 def load_first_names_with_gender_to_table(conn, first_names_data, cursor):
-    """Loads first names with gender to the first_names table."""
+    """Updates gender for a list of first names."""
     sql = "UPDATE first_names SET gender = %s WHERE name = %s AND gender IS NULL;"
     updated_count = 0
     error_count = 0
     
-    for item in first_names_data:
+    for i, item in enumerate(first_names_data, 1):
         try:
             name = item['name']
             gender = item['gender']
@@ -63,15 +69,21 @@ def load_first_names_with_gender_to_table(conn, first_names_data, cursor):
                 cursor.execute(sql, (gender, name))
                 if cursor.rowcount > 0:
                     updated_count += 1
+            
+            if i % 1000 == 0:
+                conn.commit()
+                print(f"  ... committed {i}/{len(first_names_data)} gender updates", end='\r')
+
         except psycopg2.Error as e:
-            print(f"DB Error updating gender for name '{name}': {e}", file=sys.stderr)
+            print(f"\nDB Error updating gender for name '{name}': {e}", file=sys.stderr)
             conn.rollback()
             error_count += 1
             if error_count > 100:
-                print(f"Error limit exceeded for table first_names with gender. Aborting.", file=sys.stderr)
+                print(f"\nError limit exceeded for updating genders. Aborting.", file=sys.stderr)
                 return updated_count, error_count
-        else:
-            conn.commit()
+
+    conn.commit() # Commit any remaining records
+    print(f"  ... committed {len(first_names_data)}/{len(first_names_data)} gender updates. Done.")
     print(f"Updated gender for {updated_count} first names.")
     return updated_count, error_count
 
