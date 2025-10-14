@@ -202,10 +202,10 @@ DATA_DISK=""
 echo ">>> Waiting for data disk with LUN $LUN to appear..."
 for i in {1..30}; do
     for disk in $$(ls /sys/class/scsi_disk/); do
-        if [ "$$(cat /sys/class/scsi_disk/$${disk}/device/lun)" -eq "$LUN" ]; then
-            DEVICE_NAME=$$(ls /sys/class/scsi_disk/$${disk}/device/block/)
-            DATA_DISK="/dev/$${DEVICE_NAME}"
-            echo ">>> Found disk with LUN $LUN at $DATA_DISK"
+        if [ "$$(cat /sys/class/scsi_disk/$$disk/device/lun)" -eq "$LUN" ]; then
+            DEVICE_NAME=$$(ls /sys/class/scsi_disk/$$disk/device/block/)
+            DATA_DISK="/dev/$$DEVICE_NAME"
+            echo ">>> Found disk with LUN $LUN at $$DATA_DISK"
             break 2
         fi
     done
@@ -219,18 +219,18 @@ if [[ -z "$DATA_DISK" ]]; then
 fi
 
 # Partition and format the data disk
-echo ">>> Partitioning and formatting $DATA_DISK..."
-parted "$DATA_DISK" --script mklabel gpt mkpart primary xfs 0% 100%
+echo ">>> Partitioning and formatting $$DATA_DISK..."
+parted "$$DATA_DISK" --script mklabel gpt mkpart primary xfs 0% 100%
 sleep 5 # Give a moment for the partition to be recognized by the kernel
-PARTITION="${DATA_DISK}1"
-mkfs.xfs -f "$PARTITION"
+PARTITION="$$DATA_DISK""1"
+mkfs.xfs -f "$$PARTITION"
 echo ">>> Disk formatted."
 
 # Mount the data disk
 echo ">>> Mounting the data disk..."
 mkdir -p /mnt/data
-mount "$PARTITION" /mnt/data
-echo "$PARTITION /mnt/data xfs defaults,nofail 0 2" >> /etc/fstab
+mount "$$PARTITION" /mnt/data
+echo "$$PARTITION /mnt/data xfs defaults,nofail 0 2" >> /etc/fstab
 echo ">>> Disk mounted."
 
 # Create the target directory for data uploads on the mounted disk and set permissions
