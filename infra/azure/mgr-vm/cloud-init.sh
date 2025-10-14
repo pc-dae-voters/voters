@@ -17,7 +17,7 @@ for i in {1..5}; do
   echo "apt-get update failed (attempt $i of 5), retrying in 5 seconds..."
   sleep 5
 done
-apt-get install -y apt-transport-https ca-certificates curl software-properties-common jq git xfsprogs parted
+DEBIAN_FRONTEND=noninteractive apt-get install -y apt-transport-https ca-certificates curl software-properties-common jq git xfsprogs parted
 
 # --- Set Environment Variables ---
 echo ">>> Setting environment variables..."
