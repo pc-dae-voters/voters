@@ -61,7 +61,7 @@ function get_dependent_tables() {
 function delete_table() {
     local table=$1
     echo "Dropping table ${table}..."
-    psql -c "DROP TABLE IF EXISTS ${table} CASCADE;"
+    psql -c "DROP TABLE IF EXISTS \"${table}\" CASCADE;"
 }
 
 # Parse command line arguments
