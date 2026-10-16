@@ -1,0 +1,34 @@
+output "vpc_id" {
+  value       = aws_vpc.main.id
+  description = "The ID of the VPC"
+}
+
+output "vpc_cidr_block" {
+  value       = aws_vpc.main.cidr_block
+  description = "The CIDR block of the VPC"
+}
+
+output "public_subnet_ids" {
+  value       = [for subnet in aws_subnet.public : subnet.id]
+  description = "List of IDs of public subnets"
+}
+
+output "private_subnet_ids" {
+  value       = [for subnet in aws_subnet.private : subnet.id]
+  description = "List of IDs of private subnets"
+}
+
+output "availability_zones" {
+  value       = var.availability_zones
+  description = "List of Availability Zones"
+}
+
+output "default_security_group_id" {
+  value       = aws_vpc.main.default_security_group_id
+  description = "The ID of the default security group"
+}
+
+output "route_table_ids" {
+  value       = concat([aws_route_table.public.id], aws_route_table.private[*].id)
+  description = "IDs of the public and private route tables, e.g. to add routes to a peered VPC"
+}

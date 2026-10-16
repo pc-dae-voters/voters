@@ -1,0 +1,46 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: voters-db
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  approvePlan: auto
+  # The plan is written to the tfplan-default-<name> ConfigMap, see Viewing Terraform plans and output in README.md
+  storeReadablePlan: human
+  # Deleting this object destroys the AWS resources
+  destroyResourcesOnDeletion: true
+  path: ./infra/aws/db
+  sourceRef:
+    kind: GitRepository
+    name: voters
+    namespace: flux-system
+  dependsOn:
+    - name: voters-vpc
+  backendConfig:
+    customConfiguration: |
+      backend "s3" {
+        bucket         = "${tf_state_bucket}"
+        key            = "voters-infra/db/terraform.tfstate"
+        region         = "${region}"
+        dynamodb_table = "${tf_lock_table}"
+        encrypt        = true
+      }
+  varsFrom:
+    - kind: ConfigMap
+      name: tf-config
+      varsKeys:
+        - region
+        - owner_email
+        - tf_state_bucket
+        - eks_cluster_name
+  # Used by the voters app, and bin/db-env.sh
+  writeOutputsToSecret:
+    name: voters-db-outputs
+    outputs:
+      - db_host
+      - db_port
+      - db_name
+      - db_username
+      - db_password

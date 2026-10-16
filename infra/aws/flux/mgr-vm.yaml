@@ -1,0 +1,50 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: voters-mgr-vm
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  approvePlan: auto
+  # The plan is written to the tfplan-default-<name> ConfigMap, see Viewing Terraform plans and output in README.md
+  storeReadablePlan: human
+  # Deleting this object destroys the AWS resources
+  destroyResourcesOnDeletion: true
+  path: ./infra/aws/mgr-vm
+  sourceRef:
+    kind: GitRepository
+    name: voters
+    namespace: flux-system
+  dependsOn:
+    - name: voters-vpc
+    - name: voters-db
+    - name: voters-data-volume
+  backendConfig:
+    customConfiguration: |
+      backend "s3" {
+        bucket         = "${tf_state_bucket}"
+        key            = "voters-infra/mgr-vm/terraform.tfstate"
+        region         = "${region}"
+        dynamodb_table = "${tf_lock_table}"
+        encrypt        = true
+      }
+  varsFrom:
+    - kind: ConfigMap
+      name: tf-config
+      varsKeys:
+        - region
+        - owner_email
+        - tf_state_bucket
+        - ssh_cidrs
+  vars:
+    # The branch Flux deploys this repository from, set by the voters-infra Kustomization
+    - name: project_git_branch
+      value: "${voters_git_branch:=main}"
+  # Used by bin/setup-aws.sh to access the instance
+  writeOutputsToSecret:
+    name: voters-mgr-vm-outputs
+    outputs:
+      - instance_id
+      - public_ip
+      - private_key

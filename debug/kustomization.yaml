@@ -1,0 +1,9 @@
+# A debug pod with a PostgreSQL client and the voters database's credentials, deployed to the EKS cluster as the
+# voters-debug app, see the aws-eks-voters cluster repository's target-cluster/apps/inputs/apps.yaml. The app's
+# Kustomization substitutes ${nameSpace} and ${appName}. bin/db-vault-secret.sh writes the credentials to Vault, see
+# README.md
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - external-secret.yaml
+  - deployment.yaml

@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log)",
+      "Bash(git log *)",
+      "Bash(git show)",
+      "Bash(git show *)",
+      "Bash(git branch)",
+      "Bash(git branch *)",
+      "Bash(mvn compile)",
+      "Bash(mvn clean compile)",
+      "Bash(mvn test)",
+      "Bash(mvn clean test)",
+      "Bash(mvn -q *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(docker-compose up*)",
+      "Bash(docker-compose down*)",
+      "Bash(./bin/create-tables.sh*)",
+      "Bash(./bin/load-data.sh*)",
+      "Bash(./bin/db-query.sh*)"
+    ],
+    "ask": [
+      "Bash(terraform apply*)",
+      "Bash(terraform destroy*)",
+      "Bash(./bin/setup-aws.sh*)",
+      "Bash(./bin/teardown-aws.sh*)",
+      "Bash(./bin/mgr-ssh.sh*)",
+      "Bash(./bin/upload-data.sh*)",
+      "Bash(git push*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean*)",
+      "Read(**/db-env.sh)",
+      "Read(loader.key)"
+    ]
+  }
+}

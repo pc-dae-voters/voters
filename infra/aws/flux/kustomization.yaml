@@ -1,0 +1,12 @@
+# The voters infrastructure, applied by tofu-controller on the EKS cluster. Deployed by the voters-infra Kustomization in
+# the cluster repository, see aws-eks-voters target-cluster/flux/voters-infra.yaml, which substitutes the EKS cluster's
+# tf-config ConfigMap settings: region, tf_state_bucket, tf_lock_table, eks_cluster_name, owner_email and ssh_cidrs.
+# The runner pods use the EKS cluster's tf-runner IAM role, using EKS Pod Identity
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - vpc.yaml
+  - db.yaml
+  - data-volume.yaml
+  - peering.yaml
+  - mgr-vm.yaml

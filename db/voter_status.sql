@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS voter-status (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
+); 
