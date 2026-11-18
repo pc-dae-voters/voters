@@ -31,13 +31,14 @@ activate_venv() {
 }
 
 # --- Configuration ---
-DATA_DIR="/data"
+# DATA_DIR and NUM_PEOPLE can be overridden, e.g. by bin/kind-load-data.sh
+DATA_DIR="${DATA_DIR:-/data}"
 CONSTITUENCIES_CSV="${DATA_DIR}/parl_constituencies_2025.csv"
 CON_POSTCODES_CSV="${DATA_DIR}/postcodes_with_con.csv"
 ADDRESSES_FOLDER="${DATA_DIR}/addresses"
 NAMES_FOLDER="${DATA_DIR}/names/data"
 UK_PLACES_CSV="${DATA_DIR}/uk_places.csv"
-NUM_PEOPLE=10000
+NUM_PEOPLE="${NUM_PEOPLE:-100000}"
 RANDOM_SEED=12345
 
 echo "Loading data into database..."

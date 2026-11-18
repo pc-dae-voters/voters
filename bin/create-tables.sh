@@ -14,11 +14,11 @@ declare -A TABLE_DEPENDENCIES=(
     ["con-postcodes"]="constituencies"
     ["addresses"]="places"
     ["citizen-status"]=""
-    ["citizen"]="citizen-status"
-    ["voters"]="addresses citizen"
     ["first-names"]=""
     ["surnames"]=""
-    ["births"]="voters"
+    ["citizen"]="citizen-status first-names surnames"
+    ["voters"]="addresses citizen"
+    ["births"]="citizen first-names surnames places"
     ["citizen-changes"]="citizen"
     ["marriages"]="citizen"
 )
@@ -61,7 +61,7 @@ function get_dependent_tables() {
 function delete_table() {
     local table=$1
     echo "Dropping table ${table}..."
-    psql -c "DROP TABLE IF EXISTS \"${table}\" CASCADE;"
+    psql -v ON_ERROR_STOP=1 -c "DROP TABLE IF EXISTS \"${table}\" CASCADE;"
 }
 
 # Parse command line arguments
@@ -106,8 +106,6 @@ if ! command -v psql &> /dev/null; then
     exit 1
 fi
 
-# Determine the project root using git
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 DB_DIR="$SCRIPT_DIR/../db"
 
@@ -155,8 +153,8 @@ if [[ -n "$SELECTED_TABLES" ]]; then
         done
     done
     
-    # Remove duplicates while preserving order
-    SQL_FILES=($(printf "%s\n" "${SQL_FILES[@]}" | sort -u))
+    # Remove duplicates, keeping the first, so dependencies stay before the tables that need them
+    SQL_FILES=($(printf "%s\n" "${SQL_FILES[@]}" | awk '!seen[$0]++'))
 else
     # Use all tables in dependency order
     SQL_FILES=(
@@ -166,18 +164,19 @@ else
         "con-postcodes.sql"
         "addresses.sql"
         "citizen-status.sql"
-        "citizen.sql"
-        "voters.sql"
         "first-names.sql"
         "surnames.sql"
+        "citizen.sql"
+        "voters.sql"
         "births.sql"
         "citizen-changes.sql"
         "marriages.sql"
     )
 fi
 
-# Return to the db directory to execute SQL files
-cd "${PROJECT_ROOT}/db"
+# Return to the db directory to execute SQL files, it is next to this script's directory, so the script also works
+# outside a git checkout, e.g. in the voters-db image, see db/Dockerfile
+cd "${DB_DIR}"
 
 echo "Executing SQL scripts..."
 for file in "${SQL_FILES[@]}"; do
@@ -186,7 +185,8 @@ for file in "${SQL_FILES[@]}"; do
         delete_table "$table_name"
     fi
     echo " - Running ${file}..."
-    psql -f "$file"
+    # Stop at the first error, rather than carry on and report success
+    psql -v ON_ERROR_STOP=1 -f "$file"
 done
 
 echo "All tables created successfully." 
