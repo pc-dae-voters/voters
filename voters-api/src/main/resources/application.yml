@@ -1,26 +1,37 @@
 spring:
   application:
     name: voters-api
-  
+
   datasource:
     url: jdbc:postgresql://${PGHOST:${DB_HOST:localhost}}:${PGPORT:${DB_PORT:5432}}/${PGDATABASE:${DB_NAME:voters}}
     username: ${PGUSER:${DB_USERNAME:postgres}}
     password: ${PGPASSWORD:${DB_PASSWORD:password}}
     driver-class-name: org.postgresql.Driver
-    
+
   jpa:
+    # The schema is owned by db/*.sql, applied by bin/create-tables.sh. Hibernate's validation can't be used, it
+    # rejects foreign keys whose type differs from the referenced id's, e.g. voters.address_id is BIGINT and
+    # addresses.id is SERIAL
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
+    open-in-view: false
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        # Loads the lazy names, statuses, places etc. of a page of records in a few queries rather than one per row
+        default_batch_fetch_size: 50
         jdbc:
           batch_size: 20
         order_inserts: true
         order_updates: true
-        
+
+  data:
+    web:
+      pageable:
+        max-page-size: 500
+
   jackson:
     date-format: yyyy-MM-dd
     time-zone: UTC
@@ -31,14 +42,15 @@ server:
   port: 8080
   servlet:
     context-path: /
-    
+  forward-headers-strategy: framework
+
 logging:
   level:
-    dae.pc.voters: DEBUG
+    dae.pc.voters: INFO
     org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    
+    # DEBUG logs every SQL statement
+    org.hibernate.SQL: INFO
+
 management:
   endpoints:
     web:
@@ -46,4 +58,11 @@ management:
         include: health,info,metrics
   endpoint:
     health:
-      show-details: always 
+      show-details: always
+      # /actuator/health/liveness and /actuator/health/readiness, used by deploy/kind/voters-api.yaml
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

@@ -3,62 +3,31 @@ package dae.pc.voters.entity;
 import jakarta.persistence.*;
 
 /**
- * Entity representing first names.
+ * Entity representing a first name, see db/first-names.sql.
  */
 @Entity
 @Table(name = "first_names")
 public class FirstName {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    
-    @Column(name = "name", nullable = false)
+
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
-    
-    @Enumerated(EnumType.STRING)
+
+    // M or F, the gender the name is usually given to
     @Column(name = "gender", length = 1)
-    private Citizen.Gender gender;
-    
-    // Constructors
+    private String gender;
+
     public FirstName() {}
-    
-    public FirstName(String name, Citizen.Gender gender) {
-        this.name = name;
-        this.gender = gender;
-    }
-    
-    // Getters and Setters
-    public Integer getId() {
-        return id;
-    }
-    
-    public void setId(Integer id) {
-        this.id = id;
-    }
-    
-    public String getName() {
-        return name;
-    }
-    
-    public void setName(String name) {
-        this.name = name;
-    }
-    
-    public Citizen.Gender getGender() {
-        return gender;
-    }
-    
-    public void setGender(Citizen.Gender gender) {
-        this.gender = gender;
-    }
-    
-    @Override
-    public String toString() {
-        return "FirstName{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", gender=" + gender +
-                '}';
-    }
-} 
+
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
+}

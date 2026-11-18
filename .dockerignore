@@ -1,0 +1,9 @@
+# Docker build context is the repository root, see voters-api/Dockerfile and db/Dockerfile, built by
+# bin/kind-build-images.sh
+*
+!pom.xml
+!voters-api/pom.xml
+!voters-api/src
+!bin/create-tables.sh
+!db/*.sql
+!db/docker-init.sh

@@ -1,209 +1,98 @@
 package dae.pc.voters.service;
 
+import dae.pc.voters.dto.VoterDto;
 import dae.pc.voters.entity.Voter;
+import dae.pc.voters.repository.AddressRepository;
+import dae.pc.voters.repository.CitizenRepository;
 import dae.pc.voters.repository.VoterRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
 
 /**
- * Service for Voter business operations.
+ * Service for voter registrations. List filters: q, words in the voter's name, citizenId, addressId, postcode, the
+ * start of the postcode, placeId, constituencyId and openRegister, true or false.
  */
 @Service
-@Transactional
-public class VoterService {
-    
+public class VoterService extends CrudService<Voter, VoterDto, Long> {
+
     private final VoterRepository voterRepository;
-    
+    private final CitizenRepository citizenRepository;
+    private final AddressRepository addressRepository;
+    private final AddressService addressService;
+
     @Autowired
-    public VoterService(VoterRepository voterRepository) {
-        this.voterRepository = voterRepository;
+    public VoterService(VoterRepository repository, CitizenRepository citizenRepository,
+                        AddressRepository addressRepository, AddressService addressService) {
+        super(repository, "Voter");
+        this.voterRepository = repository;
+        this.citizenRepository = citizenRepository;
+        this.addressRepository = addressRepository;
+        this.addressService = addressService;
     }
-    
-    /**
-     * Find voter by ID.
-     */
-    public Optional<Voter> findById(Long id) {
-        return voterRepository.findById(id);
+
+    @Override
+    protected VoterDto toDto(Voter v) {
+        var citizen = v.getCitizen();
+        var address = v.getAddress();
+        var place = address != null ? address.getPlace() : null;
+        var constituency = address != null ? addressService.constituencyOf(address) : null;
+        return new VoterDto(v.getId(),
+                citizen != null ? citizen.getId() : null, Names.of(citizen),
+                address != null ? address.getId() : null,
+                address != null ? address.getAddress() : null,
+                address != null ? address.getPostcode() : null,
+                place != null ? place.getName() : null,
+                constituency != null ? constituency.getId() : null,
+                constituency != null ? constituency.getName() : null,
+                v.getOpenRegister(), v.getRegistrationDate());
     }
-    
-    /**
-     * Find voter by citizen ID.
-     */
-    public Optional<Voter> findByCitizenId(Integer citizenId) {
-        return voterRepository.findByCitizenId(citizenId);
+
+    @Override
+    protected Voter newEntity() {
+        return new Voter();
     }
-    
-    /**
-     * Find all voters with pagination.
-     */
-    public Page<Voter> findAll(Pageable pageable) {
-        return voterRepository.findAll(pageable);
+
+    @Override
+    protected void apply(VoterDto dto, Voter v) {
+        var citizen = reference(citizenRepository, dto.citizenId(), "Citizen");
+        voterRepository.findByCitizenId(citizen.getId())
+                .filter(other -> !other.getId().equals(v.getId()))
+                .ifPresent(other -> {
+                    throw new BadRequestException("Citizen " + citizen.getId() + " is already registered, voter " + other.getId());
+                });
+        v.setCitizen(citizen);
+        v.setAddress(reference(addressRepository, dto.addressId(), "Address"));
+        v.setOpenRegister(dto.openRegister() != null ? dto.openRegister() : Boolean.FALSE);
+        v.setRegistrationDate(dto.registrationDate() != null ? dto.registrationDate() : LocalDate.now());
     }
-    
-    /**
-     * Find all voters.
-     */
-    public List<Voter> findAll() {
-        return voterRepository.findAll();
+
+    @Override
+    protected Specification<Voter> filter(Filters<Voter> filters) {
+        return filters
+                .add(filters.get("q"), q -> Names.matching(q, root -> root.join("citizen")))
+                .equal(filters.getInt("citizenId"), root -> root.get("citizen").get("id"))
+                .equal(filters.getInt("addressId"), root -> root.get("address").get("id"))
+                .add(filters.get("postcode"), p -> (root, query, cb) ->
+                        Filters.startsWith(cb, root.get("address").get("postcode"), Filters.normalisePostcode(p)))
+                .equal(filters.getInt("placeId"), root -> root.get("address").get("place").get("id"))
+                .add(filters.getInt("constituencyId"), id -> addressService.inConstituency(id, root -> root.join("address")))
+                .equal(filters.getBoolean("openRegister"), root -> root.get("openRegister"))
+                .build();
     }
-    
-    /**
-     * Find voters by constituency ID.
-     */
-    public List<Voter> findByConstituencyId(Integer constituencyId) {
-        return voterRepository.findByConstituencyId(constituencyId);
+
+    @Transactional(readOnly = true)
+    public VoterDto getByCitizen(Integer citizenId) {
+        return voterRepository.findByCitizenId(citizenId).map(this::toDto)
+                .orElseThrow(() -> new NotFoundException("Voter for citizen", citizenId));
     }
-    
-    /**
-     * Find voters by constituency name.
-     */
-    public List<Voter> findByConstituencyName(String constituencyName) {
-        return voterRepository.findByConstituencyName(constituencyName);
+
+    public VoterDto setOpenRegister(Long id, boolean openRegister) {
+        Voter voter = find(id);
+        voter.setOpenRegister(openRegister);
+        return toDto(repository.saveAndFlush(voter));
     }
-    
-    /**
-     * Find voters by postcode.
-     */
-    public List<Voter> findByPostcode(String postcode) {
-        return voterRepository.findByPostcode(postcode);
-    }
-    
-    /**
-     * Find voters by place name.
-     */
-    public List<Voter> findByPlaceName(String placeName) {
-        return voterRepository.findByPlaceName(placeName);
-    }
-    
-    /**
-     * Find voters by country name.
-     */
-    public List<Voter> findByCountryName(String countryName) {
-        return voterRepository.findByCountryName(countryName);
-    }
-    
-    /**
-     * Find voters on the open register.
-     */
-    public List<Voter> findOnOpenRegister() {
-        return voterRepository.findByOpenRegisterTrue();
-    }
-    
-    /**
-     * Find voters on the open register with pagination.
-     */
-    public Page<Voter> findOnOpenRegister(Pageable pageable) {
-        return voterRepository.findByOpenRegisterTrue(pageable);
-    }
-    
-    /**
-     * Find voters not on the open register.
-     */
-    public List<Voter> findNotOnOpenRegister() {
-        return voterRepository.findByOpenRegisterFalse();
-    }
-    
-    /**
-     * Find voters by registration date.
-     */
-    public List<Voter> findByRegistrationDate(LocalDate registrationDate) {
-        return voterRepository.findByRegistrationDate(registrationDate);
-    }
-    
-    /**
-     * Find voters registered between two dates.
-     */
-    public List<Voter> findByRegistrationDateBetween(LocalDate startDate, LocalDate endDate) {
-        return voterRepository.findByRegistrationDateBetween(startDate, endDate);
-    }
-    
-    /**
-     * Create a new voter registration.
-     */
-    public Voter registerVoter(Voter voter) {
-        return voterRepository.save(voter);
-    }
-    
-    /**
-     * Update an existing voter registration.
-     */
-    public Voter updateVoter(Long id, Voter voterDetails) {
-        return voterRepository.findById(id)
-                .map(voter -> {
-                    voter.setAddress(voterDetails.getAddress());
-                    voter.setOpenRegister(voterDetails.getOpenRegister());
-                    voter.setRegistrationDate(voterDetails.getRegistrationDate());
-                    return voterRepository.save(voter);
-                })
-                .orElseThrow(() -> new RuntimeException("Voter not found with id: " + id));
-    }
-    
-    /**
-     * Update voter's open register status.
-     */
-    public Voter updateOpenRegisterStatus(Long id, boolean onOpenRegister) {
-        return voterRepository.findById(id)
-                .map(voter -> {
-                    voter.setOpenRegister(onOpenRegister);
-                    return voterRepository.save(voter);
-                })
-                .orElseThrow(() -> new RuntimeException("Voter not found with id: " + id));
-    }
-    
-    /**
-     * Update voter's address.
-     */
-    public Voter updateAddress(Long id, Integer addressId) {
-        return voterRepository.findById(id)
-                .map(voter -> {
-                    // Note: This would need the Address entity to be properly set
-                    // For now, we'll just update the reference
-                    return voterRepository.save(voter);
-                })
-                .orElseThrow(() -> new RuntimeException("Voter not found with id: " + id));
-    }
-    
-    /**
-     * Deregister a voter.
-     */
-    public void deregisterVoter(Long id) {
-        voterRepository.deleteById(id);
-    }
-    
-    /**
-     * Get statistics about voters.
-     */
-    public VoterStatistics getStatistics() {
-        long totalVoters = voterRepository.count();
-        long onOpenRegister = voterRepository.countByOpenRegisterTrue();
-        long notOnOpenRegister = voterRepository.countByOpenRegisterFalse();
-        
-        return new VoterStatistics(totalVoters, onOpenRegister, notOnOpenRegister);
-    }
-    
-    /**
-     * Statistics class for voter data.
-     */
-    public static class VoterStatistics {
-        private final long totalVoters;
-        private final long onOpenRegister;
-        private final long notOnOpenRegister;
-        
-        public VoterStatistics(long totalVoters, long onOpenRegister, long notOnOpenRegister) {
-            this.totalVoters = totalVoters;
-            this.onOpenRegister = onOpenRegister;
-            this.notOnOpenRegister = notOnOpenRegister;
-        }
-        
-        public long getTotalVoters() { return totalVoters; }
-        public long getOnOpenRegister() { return onOpenRegister; }
-        public long getNotOnOpenRegister() { return notOnOpenRegister; }
-    }
-} 
+}

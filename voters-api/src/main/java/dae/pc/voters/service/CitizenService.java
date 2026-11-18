@@ -1,197 +1,100 @@
 package dae.pc.voters.service;
 
+import dae.pc.voters.dto.CitizenDto;
+import dae.pc.voters.entity.Birth;
 import dae.pc.voters.entity.Citizen;
-import dae.pc.voters.entity.CitizenStatus;
-import dae.pc.voters.entity.FirstName;
-import dae.pc.voters.entity.Surname;
+import dae.pc.voters.entity.Voter;
+import dae.pc.voters.repository.BirthRepository;
 import dae.pc.voters.repository.CitizenRepository;
 import dae.pc.voters.repository.CitizenStatusRepository;
-import dae.pc.voters.repository.FirstNameRepository;
-import dae.pc.voters.repository.SurnameRepository;
+import dae.pc.voters.repository.VoterRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
 
 /**
- * Service for Citizen business operations.
+ * Service for citizens. List filters: q, words in the name, firstName, surname, gender, statusCode and alive, true or
+ * false.
  */
 @Service
-@Transactional
-public class CitizenService {
-    
-    private final CitizenRepository citizenRepository;
-    private final CitizenStatusRepository citizenStatusRepository;
-    private final FirstNameRepository firstNameRepository;
-    private final SurnameRepository surnameRepository;
-    
+public class CitizenService extends CrudService<Citizen, CitizenDto, Integer> {
+
+    private final CitizenStatusRepository statusRepository;
+    private final BirthRepository birthRepository;
+    private final VoterRepository voterRepository;
+    private final Names names;
+
     @Autowired
-    public CitizenService(CitizenRepository citizenRepository,
-                         CitizenStatusRepository citizenStatusRepository,
-                         FirstNameRepository firstNameRepository,
-                         SurnameRepository surnameRepository) {
-        this.citizenRepository = citizenRepository;
-        this.citizenStatusRepository = citizenStatusRepository;
-        this.firstNameRepository = firstNameRepository;
-        this.surnameRepository = surnameRepository;
+    public CitizenService(CitizenRepository repository, CitizenStatusRepository statusRepository,
+                          BirthRepository birthRepository, VoterRepository voterRepository, Names names) {
+        super(repository, "Citizen");
+        this.statusRepository = statusRepository;
+        this.birthRepository = birthRepository;
+        this.voterRepository = voterRepository;
+        this.names = names;
     }
-    
-    /**
-     * Find citizen by ID.
-     */
-    public Optional<Citizen> findById(Integer id) {
-        return citizenRepository.findById(id);
+
+    @Override
+    protected CitizenDto toDto(Citizen c) {
+        var status = c.getStatus();
+        var first = c.getFirstName();
+        var last = c.getSurname();
+        LocalDate birthDate = c.getId() == null ? null
+                : birthRepository.findFirstByCitizenId(c.getId()).map(Birth::getDate).orElse(null);
+        Long voterId = c.getId() == null ? null
+                : voterRepository.findByCitizenId(c.getId()).map(Voter::getId).orElse(null);
+        return new CitizenDto(c.getId(),
+                status != null ? status.getId() : null,
+                status != null ? status.getCode() : null,
+                status != null ? status.getDescription() : null,
+                first != null ? first.getId() : null, first != null ? first.getName() : null,
+                last != null ? last.getId() : null, last != null ? last.getName() : null,
+                c.getGender(), c.getDied(), birthDate, voterId);
     }
-    
-    /**
-     * Find all citizens with pagination.
-     */
-    public Page<Citizen> findAll(Pageable pageable) {
-        return citizenRepository.findAll(pageable);
+
+    @Override
+    protected Citizen newEntity() {
+        return new Citizen();
     }
-    
-    /**
-     * Find all citizens.
-     */
-    public List<Citizen> findAll() {
-        return citizenRepository.findAll();
-    }
-    
-    /**
-     * Find citizens by gender.
-     */
-    public List<Citizen> findByGender(Citizen.Gender gender) {
-        return citizenRepository.findByGender(gender);
-    }
-    
-    /**
-     * Find citizens by status code.
-     */
-    public List<Citizen> findByStatusCode(String statusCode) {
-        return citizenRepository.findByStatusCode(statusCode);
-    }
-    
-    /**
-     * Find citizens by surname.
-     */
-    public List<Citizen> findBySurname(String surname) {
-        return citizenRepository.findBySurname(surname);
-    }
-    
-    /**
-     * Find citizens by first name.
-     */
-    public List<Citizen> findByFirstName(String firstName) {
-        return citizenRepository.findByFirstName(firstName);
-    }
-    
-    /**
-     * Find citizens by full name.
-     */
-    public List<Citizen> findByFullName(String firstName, String surname) {
-        return citizenRepository.findByFullName(firstName, surname);
-    }
-    
-    /**
-     * Find alive citizens.
-     */
-    public List<Citizen> findAlive() {
-        return citizenRepository.findByDiedIsNull();
-    }
-    
-    /**
-     * Find alive citizens with pagination.
-     */
-    public Page<Citizen> findAlive(Pageable pageable) {
-        return citizenRepository.findByDiedIsNull(pageable);
-    }
-    
-    /**
-     * Search citizens by name.
-     */
-    public List<Citizen> searchByName(String searchTerm) {
-        return citizenRepository.searchByName(searchTerm);
-    }
-    
-    /**
-     * Create a new citizen.
-     */
-    public Citizen createCitizen(Citizen citizen) {
-        return citizenRepository.save(citizen);
-    }
-    
-    /**
-     * Update an existing citizen.
-     */
-    public Citizen updateCitizen(Integer id, Citizen citizenDetails) {
-        return citizenRepository.findById(id)
-                .map(citizen -> {
-                    citizen.setStatus(citizenDetails.getStatus());
-                    citizen.setSurname(citizenDetails.getSurname());
-                    citizen.setFirstName(citizenDetails.getFirstName());
-                    citizen.setGender(citizenDetails.getGender());
-                    citizen.setDied(citizenDetails.getDied());
-                    return citizenRepository.save(citizen);
-                })
-                .orElseThrow(() -> new RuntimeException("Citizen not found with id: " + id));
-    }
-    
-    /**
-     * Mark a citizen as deceased.
-     */
-    public Citizen markAsDeceased(Integer id, LocalDate deathDate) {
-        return citizenRepository.findById(id)
-                .map(citizen -> {
-                    citizen.setDied(deathDate);
-                    return citizenRepository.save(citizen);
-                })
-                .orElseThrow(() -> new RuntimeException("Citizen not found with id: " + id));
-    }
-    
-    /**
-     * Delete a citizen.
-     */
-    public void deleteCitizen(Integer id) {
-        citizenRepository.deleteById(id);
-    }
-    
-    /**
-     * Get statistics about citizens.
-     */
-    public CitizenStatistics getStatistics() {
-        long totalCitizens = citizenRepository.count();
-        long aliveCitizens = citizenRepository.countByDiedIsNull();
-        long maleCitizens = citizenRepository.countByGender(Citizen.Gender.M);
-        long femaleCitizens = citizenRepository.countByGender(Citizen.Gender.F);
-        
-        return new CitizenStatistics(totalCitizens, aliveCitizens, maleCitizens, femaleCitizens);
-    }
-    
-    /**
-     * Statistics class for citizen data.
-     */
-    public static class CitizenStatistics {
-        private final long totalCitizens;
-        private final long aliveCitizens;
-        private final long maleCitizens;
-        private final long femaleCitizens;
-        
-        public CitizenStatistics(long totalCitizens, long aliveCitizens, long maleCitizens, long femaleCitizens) {
-            this.totalCitizens = totalCitizens;
-            this.aliveCitizens = aliveCitizens;
-            this.maleCitizens = maleCitizens;
-            this.femaleCitizens = femaleCitizens;
+
+    @Override
+    protected void apply(CitizenDto dto, Citizen c) {
+        if (dto.statusCode() != null && !dto.statusCode().isBlank()) {
+            c.setStatus(statusRepository.findByCodeIgnoreCase(dto.statusCode().trim())
+                    .orElseThrow(() -> new BadRequestException("Citizen status " + dto.statusCode() + " does not exist")));
+        } else {
+            c.setStatus(reference(statusRepository, dto.statusId(), "Citizen status"));
         }
-        
-        public long getTotalCitizens() { return totalCitizens; }
-        public long getAliveCitizens() { return aliveCitizens; }
-        public long getMaleCitizens() { return maleCitizens; }
-        public long getFemaleCitizens() { return femaleCitizens; }
-        public long getDeceasedCitizens() { return totalCitizens - aliveCitizens; }
+        c.setFirstName(names.firstName(dto.firstNameId(), dto.firstName(), dto.gender()));
+        c.setSurname(names.surname(dto.surnameId(), dto.surname()));
+        c.setGender(dto.gender());
+        c.setDied(dto.died());
     }
-} 
+
+    @Override
+    protected Specification<Citizen> filter(Filters<Citizen> filters) {
+        return filters
+                .add(filters.get("q"), q -> Names.matching(q, root -> root))
+                .add(filters.get("firstName"), n -> (root, query, cb) ->
+                        cb.equal(cb.lower(root.get("firstName").get("name")), n.toLowerCase()))
+                .add(filters.get("surname"), n -> (root, query, cb) ->
+                        cb.equal(cb.lower(root.get("surname").get("name")), n.toLowerCase()))
+                .equal(filters.get("gender"), root -> root.get("gender"))
+                .add(filters.get("statusCode"), s -> (root, query, cb) ->
+                        cb.equal(cb.lower(root.get("status").get("code")), s.toLowerCase()))
+                .add(filters.getBoolean("alive"), alive -> (root, query, cb) ->
+                        alive ? cb.isNull(root.get("died")) : cb.isNotNull(root.get("died")))
+                .build();
+    }
+
+    /**
+     * Records the citizen's death.
+     */
+    public CitizenDto markAsDeceased(Integer id, LocalDate date) {
+        Citizen citizen = find(id);
+        citizen.setDied(date);
+        return toDto(repository.saveAndFlush(citizen));
+    }
+}
